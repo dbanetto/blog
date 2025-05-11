@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - aws</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/tags/aws/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 11 Apr 2021 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>AWS SSO Deeeep Dive</title>
+          <pubDate>Sun, 11 Apr 2021 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/aws-sso-deep-dive/</link>
+          <guid>https://blog.rnett.nz/posts/aws-sso-deep-dive/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/aws-sso-deep-dive/">&lt;!--
+ What to cover:
+  - intro to AWS SSO
+  - What the cli experience is like
+  - What APIs are happening
+--&gt;
+&lt;h1 id=&quot;what-is-even-sso&quot;&gt;What is even SSO?!&lt;&#x2F;h1&gt;
+&lt;p&gt;SSO is the fancy TLA for &lt;strong&gt;S&lt;&#x2F;strong&gt;ingle &lt;strong&gt;S&lt;&#x2F;strong&gt;ign &lt;strong&gt;O&lt;&#x2F;strong&gt;n, which is the great of idea
+of having just having to login into one place &amp;amp; then authenticate into other
+services when you want to. Some kind people have put great effort into the
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Single_sign-on&quot;&gt;Wikipeia&lt;&#x2F;a&gt; page for it,
+recommended to get more familiar with the idea.&lt;&#x2F;p&gt;
+&lt;p&gt;Generally it is a very &lt;em&gt;Enterprise Plan&lt;&#x2F;em&gt; feature so us mere
+mortals that cannot pay the usual USD$50&#x2F;user&#x2F;month (minimum 50 users) don&#x27;t get to see it much.
+Of course with the exception of the &quot;Social&quot; logins (&quot;Sign in with Facebook&#x2F;Google&quot;)
+and AWS that provides it FOR FREE.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;&#x2F;strong&gt;: that none of these companies named sponsored this post&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;the-lab-setup&quot;&gt;The &quot;&lt;em&gt;Lab&lt;&#x2F;em&gt;&quot; Setup&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Developer account for &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;developer.okta.com&#x2F;&quot;&gt;Okta&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Free tier &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;aws.amazon.com&#x2F;&quot;&gt;AWS Account&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Use &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;cli&#x2F;latest&#x2F;userguide&#x2F;install-cliv2.html&quot;&gt;AWS CLI v2&lt;&#x2F;a&gt;, SSO support is only in V2+&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Setting up basic use of &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;singlesignon&#x2F;latest&#x2F;userguide&#x2F;okta-idp.html&quot;&gt;Okta as the &lt;strong&gt;Id&lt;&#x2F;strong&gt;entity &lt;strong&gt;P&lt;&#x2F;strong&gt;rovider (IdP)&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;I will not be going through how to setup this &quot;&lt;em&gt;lab&lt;&#x2F;em&gt;&quot;, AWS &amp;amp; Okta have some
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;singlesignon&#x2F;latest&#x2F;userguide&#x2F;okta-idp.html&quot;&gt;nice docs&lt;&#x2F;a&gt; on how to&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;To start, the native way of getting credentials for a session are the following:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#f9f9f9;color:#111111;&quot;&gt;&lt;code&gt;&lt;span&gt;aws sso login &amp;lt;profile_name&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And from there lets see what has done.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-has-that-done&quot;&gt;What has that done?&lt;&#x2F;h2&gt;
+&lt;p&gt;There is some new mess in your &lt;code&gt;~&#x2F;.aws&lt;&#x2F;code&gt; folder.&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#f9f9f9;color:#111111;&quot;&gt;&lt;code&gt;&lt;span&gt;&amp;gt; find ~&#x2F;.aws -exec file {} \;
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;config: ASCII text
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;cli: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;cli&#x2F;cache: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;cli&#x2F;cache&#x2F;0000000000000000000000000000000000000000.json: JSON data
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;botocore-client-id-ap-southeast-9.json: JSON data
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;1111111111111111111111111111111111111111.json: JSON data
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And in the &lt;code&gt;~&#x2F;.aws&#x2F;config&lt;&#x2F;code&gt; there is now a profile&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#f9f9f9;color:#111111;&quot;&gt;&lt;code&gt;&lt;span&gt;[profile RoleAccess-000000000000]
+&lt;&#x2F;span&gt;&lt;span&gt;sso_start_url = https:&#x2F;&#x2F;d-0000000000.awsapps.com&#x2F;start#&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;sso_region = ap-southeast-9
+&lt;&#x2F;span&gt;&lt;span&gt;sso_account_id = 000000000000
+&lt;&#x2F;span&gt;&lt;span&gt;sso_role_name = RoleAccess
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;cache-files&quot;&gt;Cache files?!&lt;&#x2F;h3&gt;
+&lt;p&gt;Those cache files are new and interesting. So what are in those?&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;cli-cache&quot;&gt;CLI cache&lt;&#x2F;h4&gt;
+&lt;p&gt;&lt;code&gt;~&#x2F;.aws&#x2F;cli&#x2F;cache&#x2F;0000000000000000000000000000000000000000.json&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ProviderType&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;sso&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Credentials&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;AccessKeyId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ASIA0000000000000000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;SecretAccessKey&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot; -- classic secret access key high entropy stuff here --&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;SessionToken&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot; -- big old session token --&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Expiration&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2021-02-11T09:12:40Z&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Taking these credentials out they actually work.&lt;&#x2F;p&gt;
+&lt;p&gt;So this looks like how AWS CLI v2 handles your SSO sessions and just keeps them
+to the side for you.&lt;&#x2F;p&gt;
+&lt;p&gt;The file name looks to be a hash so guessing the name is pretty hard for a file
+inclusion attack unlike the ye &#x27;old &lt;code&gt;~&#x2F;.aws&#x2F;credentials&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Though these look to be stable hashes per profile.&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;sso-file&quot;&gt;SSO File&lt;&#x2F;h4&gt;
+&lt;p&gt;&lt;code&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;1111111111111111111111111111111111111111.json&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;startUrl&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;d-0000000000.awsapps.com&#x2F;start#&#x2F;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;region&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ap-southeast-9&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;accessToken&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eyJlbmMiOiJBMjU2R0NNIiwidGFnIjoiSm5udXRHU0tKTVVTb1RqRyIsImFsZyI6IkEyNTZHQ01LVyIsIml2IjoiazNiZXlaeEtDR0otc05VQyJ9.AYABeObaD6db3xtlf2VyQV4uZbcAHwABABBEYXRhUGxhbmVTZXNzaW9uAAlQZXJlZ3JpbmUAAQAHYXdzLWttcwBQYXJuOmF3czprbXM6YXAtc291dGhlYXN0LTI6NDEyMjAxMDI1ODU4OmtleS9kMTEwZTQ1ZC1mMGVhLTQ4NTYtYmFjNS0xMmMyYTMxM2Q2YWEAuAECAQB4Pcqs65qFZyXWdyHZA9hnHzXOhvyEOzDstw3xH4zNak0BY6qRWzxkq86qEu6rfKsXwQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDLXUMJLzS47DezlQSAIBEIA7lHcufjSiF9_gCd_IcRwk9NoCCnr9JmXvmWygjueAsEigiiXZ3WUF-K64_lSWTdaT9dC8rGDIh2-nEjoCAAAAAAwAABAAAAAAAAAAAAAAAAAAAFNQZGeo3pZnmaTvFFpgff____8AAAABAAAAAAAAAAAAAAABAAAAIAoOunYoPR2JIAc65uLD1QkKwC7dH1NzyRkba108s0-XEVJFBRIH1bPqAUpp7NaJyg.dzmoGCWoLlq-x4GZ.IHhQ2ffvTLAQQfffWXu9QvnEg1dir26R1HZ5gcNX1QcScFq15-AE_9ylR9djZyTv2qCk3xHRdx26oGhhK50m6DbryV2wy1OsEL_UpbAdt4x18upnSJsQXEcnug9mEbdP8P-XtXCzhCMT2yCahatqvsifKagyInM2vQATNZRc87r2pM4qy_z4h3rmzBpvXw6_lQ5AN7gZXN1urAGELHGanrHzkCX80msZskK1_RFIQbO0HADjfTnEeK1UmNXaXpFbq2oMI-NHIbkGsf8_XhY3AFX-EZfqS_MmgPAQAJ-fTF4P8vlJ4-UHQTX3onws_v3LWoqGA8Tlf-Vrf76mqUqN-ZUtnsUeP-0NVy2dDZu3z54xghta40Dbly9QVItaGzB9oSXJKn-NwiBdKxm6F0BhC9TShFghZ-k9P0JFCuHvl7lKlETTSH1tnQXlRvTlAwN7hagZWMqw91fZgg9v_Ujc6w.zj3d2TiDLW7ajD5NVf6P0A&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;expiresAt&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2021-02-11T16:12:30Z&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Hmm a string starting with &lt;code&gt;ey&lt;&#x2F;code&gt;?! Is this a JWT?!&lt;&#x2F;p&gt;
+&lt;p&gt;Header contains the following.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;enc&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;A256GCM&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;tag&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;JnnutGSKJMUSoTjG&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;alg&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;A256GCMKW&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iv&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;k3beyZxKCGJ-sNUC&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;There is a few crypto stuff that has gone over my head, but from searching for
+the algorithm (under &lt;code&gt;alg&lt;&#x2F;code&gt; key) &lt;code&gt;A256GCMKW&lt;&#x2F;code&gt; found a &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;stackoverflow.com&#x2F;questions&#x2F;38122521&#x2F;what-is-the-algorithm-string-for-agcm256-kw-in-java-cryptography-to-be-used-i&quot;&gt;helpful StackOverflow
+thread&lt;&#x2F;a&gt;.
+The key points I got from it are&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;AES256&lt;&#x2F;code&gt; encryption algorithm used with the following options,&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;GCM&lt;&#x2F;code&gt; - to detonate it is in &lt;code&gt;GCM&lt;&#x2F;code&gt; mode&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;KW&lt;&#x2F;code&gt; - to detonate that key wrapping is used&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Does this help much? Not really.&lt;&#x2F;p&gt;
+&lt;p&gt;Now for the body (decoded by the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gchq.github.io&#x2F;CyberChef&#x2F;&quot;&gt;CyberChef themselves&lt;&#x2F;a&gt;)&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;text&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-text &quot;&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;&lt;span&gt;...xæÚ.§[ß.e.erA^.e·......DataPlaneSession.	Peregrine....aws-kms.Parn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa.¸....x=Ê¬ë..g%Öw!Ù.Øg.5Î.ü.;0ì·
+&lt;&#x2F;span&gt;&lt;span&gt;ñ..ÍjM.cª.[&amp;lt;d«Îª.î«|«.Á...~0|.	*.H.÷
+&lt;&#x2F;span&gt;&lt;span&gt;... o0m...0h.	*.H.÷
+&lt;&#x2F;span&gt;&lt;span&gt;...0..	`.H.e....0...µÔ0.óK.Ã{9PH....;.w.~4¢.Ø.t..ÂOM  §¯Òf^ù.Ê.îx....¢].ÖPRºâT.MÖ.õÐ¼¬`È.iÄ.........................Ô..ê7¥.æi;Å....À...@...........@.....®...GbH.Î¹¸°õBB°.·GÔÜòFFÚ×O,Ñq.$PQ }[&amp;gt; .¦.Íh. w9¨.%¨.Z±àfH..6}ûÓ,..}÷Ö^ïP¾q ÕØ«Û¤u..`pÕõAÄ...y.Or..]...¿j..|GEÜvê.¡.®t. Û¯%vÃ-N°BÔ¥°.·.uòêgH..\G&amp;#39;º.f.·Oðõí\,á.ÄöÈ&amp;amp;¡jÚ¯²&amp;#39;Êj...Í¯@.Íe.&amp;lt;î½©3.²Ï.w®lÁ¦õðêT9.Þàesuº°..±ÆjzÇÎ@.óI¬fÉ
+&lt;&#x2F;span&gt;&lt;span&gt;Õ.HA³´..ã}9Äx.T.ÕÚ^.[«j. ÑÈnA¬.Åácp.\F_©#&amp;amp;.ð...Ó..ü¾RxPt._z&amp;#39;ÂË÷-j*....õk.¾¦©J.eKg±G.ÐÕrÙÐÙ»|ùã.!µ®4
+&lt;&#x2F;span&gt;&lt;span&gt;¹rõ.Hµ¡³.Ú.\.§7..t¬fè]..&#x2F;SJ.`..=?BE
+&lt;&#x2F;span&gt;&lt;span&gt;áï.¹J.DÓH}m..åFôå..{.¨.XÊ°÷WÙ..oR7:Ä
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Um... wat?! This looks very cyber encrypted but also is that a ARN in there?
+And what is this &lt;code&gt;DataPlaneSession&lt;&#x2F;code&gt;?!&lt;&#x2F;p&gt;
+&lt;p&gt;That KMS key id &lt;code&gt;arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;&#x2F;code&gt; is a bit strange.
+The account id is not one of &lt;em&gt;mine&lt;&#x2F;em&gt;, so it must be an AWS managed account. So
+lets try some basic KMS operations on the key to see if there is a permissive
+key policy.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; aws &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;kms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; describe-key&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --region&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; ap-southeast-2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --key-id&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;An&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; error occurred (AccessDeniedException&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; calling the DescribeKey operation:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; aws &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;kms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; encrypt&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --region&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; ap-southeast-2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --key-id&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --plaintext &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;$(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt;echo lol &lt;&#x2F;span&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;| &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;base64&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;)&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;An&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; error occurred (AccessDeniedException&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; calling the Encrypt operation:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; aws &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;kms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; decrypt&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --region&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; ap-southeast-2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --key-id&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --ciphertext-blob &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;$(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;base64&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; jwt_body&lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;)&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;An&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; error occurred (InvalidCiphertextException&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; calling the Decrypt operation:
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Ok, so that is mostly a no from what I know about KMS keys. Though that &lt;code&gt;InvalidCiphertextException&lt;&#x2F;code&gt; might be an &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Oracle_attack&quot;&gt;oracle vector&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I do wonder if it is the same KMS key for everyone that has deployed their SSO
+into that region or if it is per customer.&lt;&#x2F;p&gt;
+&lt;p&gt;The former might allow a path for token reuse between SSO instances, while the
+latter would mean a $1&#x2F;month&#x2F;per customer instance fee for the SSO team that they
+are kindly not passing onto the customer (please thank your local SSO team
+member today).&lt;&#x2F;p&gt;
+&lt;p&gt;If I ever get around to make more SSO instances I&#x27;ll update this post with
+those findings.&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;signature-section&quot;&gt;Signature section&lt;&#x2F;h4&gt;
+&lt;p&gt;There isn&#x27;t really anything we can get from this section as the algorithm is
+symmetric (AES) so we are not gonna get anything from it.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;access-token&quot;&gt;Access Token&lt;&#x2F;h3&gt;
+&lt;p&gt;Jumping back a bit, but that &lt;code&gt;accessToken&lt;&#x2F;code&gt; in &lt;code&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;1111111111111111111111111111111111111111.json&lt;&#x2F;code&gt; file is really interesting.
+It is used with the AWS SSO API to vend out access keys into accounts.&lt;&#x2F;p&gt;
+&lt;p&gt;It is essentially a replacement for your login credentials to your IdP, MFA and
+all but with a time boxed existence.
+From this token you can iterate all your accounts you have access to, the
+roles in each of those accounts and then generate access keys for them.&lt;&#x2F;p&gt;
+&lt;p&gt;The flow goes:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccounts&lt;&#x2F;code&gt; - takes the access token. Returns a list of accounts that
+the token can access&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccountRoles&lt;&#x2F;code&gt; - takes the access token, and account id. Returns a
+list of roles the token can use in said account&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;sso:GetRoleCredentials&lt;&#x2F;code&gt; - takes the access token, account id and role name.
+Returns working access keys for the role in said account.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;For details about these actions have a look at the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;boto3.amazonaws.com&#x2F;v1&#x2F;documentation&#x2F;api&#x2F;latest&#x2F;reference&#x2F;services&#x2F;sso.html&quot;&gt;Boto3 docs for SSO service&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;These actions are recorded in CloudTrail. To be honest I am surprised as these
+are at all since they are using Access Tokens instead of &lt;code&gt;STS&lt;&#x2F;code&gt; access keys.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is an example event:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventVersion&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;1.08&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;userIdentity&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;type&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Unknown&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;principalId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;aaaaaaaaaa-bbbbbbbb-cccc-dddd-eeee-ffffffffffff&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;accountId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;000000000000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;userName&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;user@example.com&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventTime&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2021-03-28T00:26:05Z&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventSource&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;sso.amazonaws.com&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventName&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ListAccountRoles&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;awsRegion&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ap-southeast-2&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;sourceIPAddress&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;8.8.8.8&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;userAgent&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Boto3&#x2F;1.17.5 Python&#x2F;3.9.2 Linux&#x2F;5 Botocore&#x2F;1.20.5&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;requestParameters&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;null&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;responseElements&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;null&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;requestID&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;7e0ffa90-e6cc-497a-982e-42ef7db5b415&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventID&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;b02878f9-a936-4027-9338-16fdba509113&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;readOnly&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventType&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;AwsServiceEvent&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;managementEvent&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventCategory&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Management&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;recipientAccountId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;000000000000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;serviceEventDetails&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;account_id&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;000000000000&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h1 id=&quot;self-plug&quot;&gt;Self-plug&lt;&#x2F;h1&gt;
+&lt;p&gt;From working with SSO I hobbled together a couple of scripts to automate the
+setup of some of the annoying parts of AWS SSO, namely &lt;code&gt;aws sso login&lt;&#x2F;code&gt;
+ssuucckks.&lt;&#x2F;p&gt;
+&lt;p&gt;You get shoved to a browser every time when you got perfectly good cached
+credentials on disk! So these scripts &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;drbarnz&#x2F;aws-sso-tools&quot;&gt;drbarnz&#x2F;aws-sso-tools&lt;&#x2F;a&gt;
+handle most of the time when you have to use that command.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Initial login&lt;&#x2F;li&gt;
+&lt;li&gt;Switching profiles (account&#x2F;role)&lt;&#x2F;li&gt;
+&lt;li&gt;Generating profiles in &lt;code&gt;~&#x2F;.aws&#x2F;config&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h1 id=&quot;take-aways&quot;&gt;Take Aways&lt;&#x2F;h1&gt;
+&lt;ul&gt;
+&lt;li&gt;SSO is cool if you want short lived credentials locally available&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;~&#x2F;.aws&#x2F;credentials&lt;&#x2F;code&gt; are out &lt;code&gt;~&#x2F;.aws&#x2F;cli&#x2F;${HASH}.json&lt;&#x2F;code&gt; are in for access
+keys&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;${HAS}.json&lt;&#x2F;code&gt;&#x27;s &lt;code&gt;accessToken&lt;&#x2F;code&gt; is same as login credentials
+but time boxed&lt;&#x2F;li&gt;
+&lt;li&gt;SSO sessions do not make a mess of environment variables&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;extra-reading&quot;&gt;Extra Reading&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;singlesignon&#x2F;latest&#x2F;userguide&#x2F;understanding-key-concepts.html&quot;&gt;AWS SSO&#x27;s docs on SSO&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;boto3.amazonaws.com&#x2F;v1&#x2F;documentation&#x2F;api&#x2F;latest&#x2F;reference&#x2F;services&#x2F;sso.html&quot;&gt;Boto3 docs for SSO service&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;drbarnz&#x2F;aws-sso-tools&quot;&gt;AWS SSO tooling&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</description>
+      </item>
+      <item>
+          <title>Budgeting your way to Admin?</title>
+          <pubDate>Tue, 20 Oct 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/aws-budget-actions/</link>
+          <guid>https://blog.rnett.nz/posts/aws-budget-actions/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/aws-budget-actions/">&lt;h1 id=&quot;how-it-started&quot;&gt;How it started&lt;&#x2F;h1&gt;
+&lt;p&gt;Today I noticed a new AWS feature, you know one of the hundreds, that piqued my interest: &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;aws.amazon.com&#x2F;blogs&#x2F;aws-cost-management&#x2F;get-started-with-aws-budgets-actions&#x2F;&quot;&gt;Budget Actions&lt;&#x2F;a&gt; and the most interesting part to me is this section:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;AWS Budgets now allows you to configure actions [..] that will be applied [..] once a budget target has been exceeded.
+There are three action types: &lt;strong&gt;Identity and Access Management (IAM) policies, Service Control policies (SCPs)&lt;&#x2F;strong&gt;, or target running instances (EC2 or RDS).&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Or in other words: if you are paying too much for AWS you can
+react automagically by slapping an IAM policy or service control policy onto a thing.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;why-tho&quot;&gt;why tho?&lt;&#x2F;h1&gt;
+&lt;p&gt;On my first read of it I thought:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This looks to be a new path to privilege escalation!&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;when-would-you-even-use-this&quot;&gt;When would you even use this?&lt;&#x2F;h2&gt;
+&lt;p&gt;This lends itself to some cool use cases&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;stop exporting spendy logs by denying it access to the S3 bucket (That&#x27;s what I&#x27;ll be using it for)&lt;&#x2F;li&gt;
+&lt;li&gt;big corporates might like to cut costs on training accounts with a
+&lt;code&gt;FinanceSayNo_DenyAll&lt;&#x2F;code&gt; SCP if you get too spendy&lt;&#x2F;li&gt;
+&lt;li&gt;got a spendy vendor hosting infrastructure in your account? Just stop their
+instances once they are over budget.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h1 id=&quot;trying-it-out&quot;&gt;Trying it out&lt;&#x2F;h1&gt;
+&lt;p&gt;So as anyone would with a free service, you click about for a while.&lt;&#x2F;p&gt;
+&lt;p&gt;The interesting parts I found about budgets (&amp;amp; thus budget actions) is that you have them activate
+on not just cost but some service usage, like S3 or EC2 CPU credits, which is
+a super neat TIL.&lt;&#x2F;p&gt;
+&lt;p&gt;At the end of my clicking I quickly got side tracked by the requirement of an
+IAM role to be use.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;the-humble-default-policy&quot;&gt;The humble default policy&lt;&#x2F;h2&gt;
+&lt;p&gt;I feel like AWS knows IAM is pretty annoying when it provides you some
+some defaults to copy &amp;amp; paste into a new role.&lt;&#x2F;p&gt;
+&lt;p&gt;And here they are:&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;default-trust-policy&quot;&gt;Default trust policy&lt;&#x2F;h3&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Version&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2012-10-17&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Statement&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: [
+&lt;&#x2F;span&gt;&lt;span&gt;    {
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Effect&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Allow&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Principal&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Service&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;budgets.amazonaws.com&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;      },
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Action&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;sts:AssumeRole&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  ]
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;default-permissions-policy&quot;&gt;Default permissions policy&lt;&#x2F;h3&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Version&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2012-10-17&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Statement&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: [
+&lt;&#x2F;span&gt;&lt;span&gt;    {
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Effect&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Allow&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Action&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: [
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ec2:DescribeInstanceStatus&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ec2:StartInstances&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ec2:StopInstances&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iam:AttachGroupPolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iam:AttachRolePolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iam:AttachUserPolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iam:DetachGroupPolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iam:DetachRolePolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iam:DetachUserPolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;organizations:AttachPolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;organizations:DetachPolicy&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;rds:DescribeDBInstances&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;rds:StartDBInstance&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;rds:StopDBInstance&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ssm:StartAutomationExecution&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;      ],
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Resource&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;*&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;  ]
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;thoughts-on-these-policy&quot;&gt;Thoughts on these policy&lt;&#x2F;h3&gt;
+&lt;p&gt;The permissions are pretty broad &amp;amp; could cause a lot of damage on their own.
+Having the ability to attach policies to any of the three IAM principals is
+screaming to be misused with some managed policies.&lt;&#x2F;p&gt;
+&lt;p&gt;This policy is generated in the Console UI, so would be cool for them to tailor
+the permissions to resources selected in the UI. Be a nice secure by default
+option &amp;amp; leave the full example in the doc pages.&lt;&#x2F;p&gt;
+&lt;p&gt;The saving grace is the trust policy only allowing the &lt;code&gt;budgets&lt;&#x2F;code&gt; service to use
+the role.&lt;&#x2F;p&gt;
+&lt;p&gt;That&#x27;s enough IAM nerd snipping, they have their reasons.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;spy-vs-spy-time&quot;&gt;Spy vs. Spy time&lt;&#x2F;h1&gt;
+&lt;p&gt;Like all good services in AWS that can mess with permissions, it might be good
+to do some &lt;em&gt;threat modelling&lt;&#x2F;em&gt;.
+Now, for todays session will be pitting against Red (Attackers) &amp;amp; Blue (Defenders) teams.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;em&gt;(this is not just me typing with different coloured LED lighting, I swear)&lt;&#x2F;em&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;setting-the-scene&quot;&gt;Setting the scene&lt;&#x2F;h2&gt;
+&lt;p&gt;To set the scene for this cyber battle:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Someone read the aforementioned AWS blog post &amp;amp; decided to give it a go, using the provided default role policies it worked &amp;amp; then went along their day&lt;&#x2F;li&gt;
+&lt;li&gt;The Red team in their wizardy ways have managed to get the AWS credentials
+of someone from Finance&#x27;s Budgeting team that is reasonable scoped to the
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;glassechidna&#x2F;trackiam&#x2F;blob&#x2F;master&#x2F;policies&#x2F;AWSBudgetsActionsWithAWSResourceControlAccess.json&quot;&gt;&lt;code&gt;AWSBudgetsActionsWithAWSResourceControlAccess&lt;&#x2F;code&gt;&lt;&#x2F;a&gt; policy.&lt;&#x2F;li&gt;
+&lt;li&gt;The Blue team are returning from their team lunch.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The Red Team has a few goals it is going for:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Elevating their own privilege&lt;&#x2F;li&gt;
+&lt;li&gt;Don&#x27;t let any one stop their rampage&lt;&#x2F;li&gt;
+&lt;li&gt;Taking down &lt;em&gt;the site&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The Blue team wants none of that, but sometimes the best you can do is to know
+something is about.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;red-team-are-going-in-with-the-attack&quot;&gt;Red team: are going in with the attack&lt;&#x2F;h2&gt;
+&lt;p&gt;With their newly acquired Budget Team permissions they find scope at what they
+can even do in the budget service. To their surprise they find this blog post
+telling them exactly how to abuse these permissions!&lt;&#x2F;p&gt;
+&lt;p&gt;Fortunately the budget service has this great way to apply IAM policies to
+roles at events &amp;amp; SCPs to organization units (OU).&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;elevating-their-own-privilege&quot;&gt;Elevating their own privilege&lt;&#x2F;h3&gt;
+&lt;p&gt;First things first, get more permissions. Red Team wants it &lt;strong&gt;ALL&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Someone want to try out this new priv-esc (what the kewl h@ck0rz call it) they
+saw using &lt;code&gt;budgets&lt;&#x2F;code&gt;. So they:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Do the cloud &lt;code&gt;whoami&lt;&#x2F;code&gt; with the less succinct  &lt;code&gt;aws sys get-caller-identity&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;Take stock, enumerate what permissions you got (there are some cool scripts
+for this like &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;andresriancho&#x2F;enumerate-iam&quot;&gt;andresriancho&#x2F;enumerate-iam&lt;&#x2F;a&gt;)
+&lt;ul&gt;
+&lt;li&gt;the team learns they can list few things like IAM roles &amp;amp; EC2
+&lt;ul&gt;
+&lt;li&gt;most importantly, listing IAM Roles includes trust policies&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;they also learn they got full access to &lt;code&gt;budgets&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;they also discover the role setup for budget actions &amp;amp; left unused for years&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Putting 1 and 1 together they came up with a plan of attack:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Make a new budget that notifies at 1 S3 API call&lt;&#x2F;li&gt;
+&lt;li&gt;Add a budget action to add the &lt;code&gt;AdministratorAccess&lt;&#x2F;code&gt; managed policy to their
+IAM principal&lt;&#x2F;li&gt;
+&lt;li&gt;???&lt;&#x2F;li&gt;
+&lt;li&gt;Profit&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Not long after laying the trap it springs &amp;amp; they now got access to everything!&lt;&#x2F;p&gt;
+&lt;p&gt;They are now free to do it all &amp;amp; order the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;aws.amazon.com&#x2F;snowmobile&#x2F;&quot;&gt;Snowmobile&lt;&#x2F;a&gt; they always wanted.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;continuing-the-rampage&quot;&gt;Continuing the rampage&lt;&#x2F;h3&gt;
+&lt;p&gt;At this point it is pretty game over, but just to keep going until the Blue
+Team notices &amp;amp; enjoying novelty of budget shinigans they keep going.&lt;&#x2F;p&gt;
+&lt;p&gt;Next, on the list from the blog post: service control policies&lt;&#x2F;p&gt;
+&lt;p&gt;So taking their previous knowledge, listing the SCPs in the account:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Make a new budget that notifies at 1 S3 API call&lt;&#x2F;li&gt;
+&lt;li&gt;Add a budget action to add the &lt;code&gt;DenyAll&lt;&#x2F;code&gt; SCP that just happened to all the OUs&lt;&#x2F;li&gt;
+&lt;li&gt;???&lt;&#x2F;li&gt;
+&lt;li&gt;No AWS services for anyone&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;It is worth noting that this will only work in the Organization root account&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h3 id=&quot;take-down-the-site&quot;&gt;Take down the site&lt;&#x2F;h3&gt;
+&lt;p&gt;I think there is starting to be a pattern here... but this time targeting EC2 &amp;amp;
+RDS instances.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;bonus-some-things-i-didn-t-try-cause-it-takes-a-billing-cycle&quot;&gt;BONUS: Some things I didn&#x27;t try cause it takes a billing cycle&lt;&#x2F;h3&gt;
+&lt;p&gt;The docs say it may remove the policy that is added by the alert.&lt;&#x2F;p&gt;
+&lt;p&gt;So what happens if you add a policy that was already added?!&lt;&#x2F;p&gt;
+&lt;p&gt;For example, targeting the default SCP policy to allow all services. Will that just get removed
+at the start of the next billing cycle.
+I know from experience that if you remove that one out you just turn AWS control
+plane off killing any serverless apps.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;blue-team-you-activated-my-trap-card&quot;&gt;Blue team: you activated my trap card!&lt;&#x2F;h2&gt;
+&lt;p&gt;Since this service is behaving how it is suppose to &amp;amp; seems pretty legitimate it
+is a bit hard to spot as it is happening. So I wouldn&#x27;t blame them to be
+surprised when the Snowmobile shows up.&lt;&#x2F;p&gt;
+&lt;p&gt;I doubt they&#x27;ll get caught with the same trick twice though, looking back there
+are some tells that tell a tall tale.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;monitoring-alerts&quot;&gt;Monitoring &amp;amp; Alerts&lt;&#x2F;h3&gt;
+&lt;p&gt;There are a few places the Blue team can put some monitors &amp;amp; alerts on:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;events relating to a human permissions&lt;&#x2F;li&gt;
+&lt;li&gt;events for attaching some juicy managed policies, like &lt;code&gt;AdministratorAccess&lt;&#x2F;code&gt; or
+&lt;code&gt;IAMFullAccess&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;if budget events are infrequently changed, any event related to their
+change&lt;&#x2F;li&gt;
+&lt;li&gt;or if you have a CI&#x2F;CD deploying the actions, monitor for actions not by the
+CI&#x2F;CD&lt;&#x2F;li&gt;
+&lt;li&gt;events for old roles suddenly coming back to life&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;This is not an exhaustive list but some starting points.&lt;&#x2F;p&gt;
+&lt;p&gt;Also worth pointing out these do not need to be paged on. No one likes
+noisy alerts, they&#x27;re often worse than nothing. So be careful tuning alerts.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cleaning-up-old-iam-roles&quot;&gt;Cleaning up old IAM roles&lt;&#x2F;h3&gt;
+&lt;p&gt;The previous role left was the keystone of the Red team&#x27;s whole operation and
+it is the same story with like 90% of lateral movement maneuvers in AWS.&lt;&#x2F;p&gt;
+&lt;p&gt;Cleaning up old unused IAM roles is really important, you never really know&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The other 10% is over permissive IAM policies to make your own roles to
+maneuver through.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;implicit-nice-parts&quot;&gt;Implicit nice parts&lt;&#x2F;h2&gt;
+&lt;p&gt;By having to bring your own role (BYOR) for the service to use it does help mitigate
+most of the potential of a Red Team&#x27;s fun with this new feature.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;playing-by-your-own-rules&quot;&gt;Playing by your own rules&lt;&#x2F;h3&gt;
+&lt;p&gt;First of all, your BYOR will be subject to your own SCPs in
+your account. So if you already got good guardrails in your SCPs that prevent
+silly things like attaching small managed policies like &lt;code&gt;AdministratorAccess&lt;&#x2F;code&gt;
+to a role then you&#x27;ll be fine. If not, that might be a thing to look into.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;it-doesn-t-have-aws-organization-magic&quot;&gt;It doesn&#x27;t have AWS Organization magic&lt;&#x2F;h3&gt;
+&lt;p&gt;Currently there is no direct support from AWS Organization.
+Which limits the scope that these can be applied on but does mean repetition
+across a fleet of AWS accounts.&lt;&#x2F;p&gt;
+&lt;p&gt;Though, on the plus side it also means you can&#x27;t pull an
+Organization Cloudformation StackSet &amp;amp; make a service-linked role with
+&lt;code&gt;AdministratorAccess&lt;&#x2F;code&gt; access all of the accounts with a click of a button
+(&lt;em&gt;that is always a good time&lt;&#x2F;em&gt;).&lt;&#x2F;p&gt;
+&lt;p&gt;If this ever does integrate with Organization, this feature will get added to the
+&quot;why billing account access is scary list&quot;.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;blast-radius&quot;&gt;Blast radius&lt;&#x2F;h3&gt;
+&lt;p&gt;If the breach is not in the Organization root account, the damage is limited to
+just that account. That&#x27;s with the assumption that accounts in a Organization stay
+completed separated, which is pretty generous.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h1&gt;
+&lt;p&gt;As with most things AWS, the devil is in the IAM policy and what IAM Roles that
+get left around.&lt;&#x2F;p&gt;
+&lt;p&gt;There is nothing inherently wrong with this service or how it does about its
+merry day, it is just in conjunction with people using AWS it can lead to a bad
+time:tm:.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;my-takeaways&quot;&gt;My Takeaways&lt;&#x2F;h2&gt;
+&lt;p&gt;Some of my takeaways from writing this:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Unused IAM Roles can be dangerous: so clean up after yourself&lt;&#x2F;strong&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Monitoring helps&lt;&#x2F;strong&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;Have guardrails around &lt;em&gt;juicy&lt;&#x2F;em&gt; managed IAM policies, it may save you
+later on&lt;&#x2F;strong&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;strong&gt;New features in older services can lead to interesting paths to
+&lt;code&gt;AdministratorAccess&lt;&#x2F;code&gt;, I would say read their announcement feeds but there
+is too much so see if anyone makes a blog about it&lt;&#x2F;strong&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</description>
+      </item>
+    </channel>
+</rss>

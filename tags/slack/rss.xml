@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - slack</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/tags/slack/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Mon, 28 Feb 2022 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Slack custom emoji shinighans</title>
+          <pubDate>Mon, 28 Feb 2022 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/slack-custom-emoji/</link>
+          <guid>https://blog.rnett.nz/posts/slack-custom-emoji/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/slack-custom-emoji/">&lt;p&gt;This will be a quick one, I swear.&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;ll start with the morale of the story:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Some things are unexpected exhilf paths when they are working as designed.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;This story is about a widely used and the &quot;IRC-of-web2.js&quot;: Slack and its loved custom emojis.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;custom-emojis-how-do-they-work&quot;&gt;Custom emojis, how do they work&lt;&#x2F;h2&gt;
+&lt;p&gt;Let&#x27;s all get one the same page here:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Slack lets you to just upload little &lt;code&gt;png&lt;&#x2F;code&gt;&#x27;s&lt;&#x2F;li&gt;
+&lt;li&gt;These are great for building a sense of community on a slack space&lt;&#x2F;li&gt;
+&lt;li&gt;A lot of memes get uploaded&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;To dig deeper you need to use a tool that is considered illegal in some jurisdictions,
+so use at your own risk: Inspect Element.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;&#x2F;images&#x2F;slack_custom_emoji&#x2F;inspect-element.png&quot; alt=&quot;A screenshot of Firefox development console with an image tag highlighed and a hover image of Picard faceplaming&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;slack-emojis-are-public-and-unauthenticated&quot;&gt;Slack emojis are &lt;em&gt;PUBLIC&lt;&#x2F;em&gt; and &lt;em&gt;UNAUTHENTICATED&lt;&#x2F;em&gt;&lt;&#x2F;h2&gt;
+&lt;p&gt;I&#x27;ll be using a open invite Slack instance for these examples: &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;lastweekinaws.slack.com&#x2F;&quot;&gt;lastweekinaws.slack.com&lt;&#x2F;a&gt;
+hosted by the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.duckbillgroup.com&#x2F;&quot;&gt;Duck Bill group&lt;&#x2F;a&gt;. That Slack&#x27;s team id is: &lt;code&gt;T02N6U1DVD4&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Not a paid advertiment, just here to spread good shit posters &lt;em&gt;cough&lt;&#x2F;em&gt; &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;quinnypig&quot;&gt;@quinnypig&lt;&#x2F;a&gt; &lt;em&gt;cough&lt;&#x2F;em&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;So, as you may know that the URLs for custom emojis are public and anyone can look at them if they have the URL.
+The format of these urls look like this:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;https:&#x2F;&#x2F;emoji.slack-edge.com&#x2F;T02N6U1DVD4&#x2F;squirrel&#x2F;465f40c0e0.png&lt;&#x2F;code&gt; aka&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;https:&#x2F;&#x2F;emoji.slack-edge.com&#x2F;T02N6U1DVD4&#x2F;squirrel&#x2F;465f40c0e0.png&quot; alt=&quot;A picture of a squirrel wearing a fedora and a suit&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;After some playing around, these urls can be expressed as &lt;code&gt;${team_id}&#x2F;${emoji_name}&#x2F;${cache_buster_hash}.png&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;base url is always &lt;code&gt;https:&#x2F;&#x2F;emoji.slack-edge.com&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;${team_id}&lt;&#x2F;code&gt; the identifier for the slack intance&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;${emoji_name}&lt;&#x2F;code&gt; is easy and quite guessable cause so many people like to recreate their last work slack in their new place, like &lt;code&gt;:falcepalm:&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;${cache_buster_hash}&lt;&#x2F;code&gt; is a random 10 character hex string so it can bust some caches&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;side note: &lt;code&gt;:squirrel:&lt;&#x2F;code&gt;  is a custom emoji on all instances &amp;amp; can be used to confirm an &lt;code&gt;team_id&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;The &lt;code&gt;${cache_buster_hash}&lt;&#x2F;code&gt; part seems to be a bit finiky. For &lt;code&gt;:squirrel:&lt;&#x2F;code&gt; it can be &lt;strong&gt;any&lt;&#x2F;strong&gt; value.
+So &lt;code&gt;0000000000&lt;&#x2F;code&gt; is perfectly valid and is great to verify a &lt;code&gt;${team_id}&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;ok-but-so-what&quot;&gt;Ok, but so what?&lt;&#x2F;h2&gt;
+&lt;p&gt;Well, it is handy to know and if you ever want to spook your security team
+just let them know that employee PII (photos) in the form of emojis are publicly
+accessible with three easy steps:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Post the emoji in question&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;Right click &amp;gt; Copy Image Link&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;Open that link in a private window &#x2F; incognito window&lt;&#x2F;li&gt;
+&lt;li&gt;🤯🧑‍💻 &lt;!-- I hope that ZWJ works everywhere --&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Though, you do need to have 3 pieces of information to get to it without it getting help from the inside.&lt;&#x2F;p&gt;
+&lt;p&gt;I did take this to the Slack enterprise people once in a past job.
+The response was: &quot;Working as designed&quot;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-can-i-do-really-do-with-this&quot;&gt;What can I do really do with this?&lt;&#x2F;h2&gt;
+&lt;p&gt;Well, not that much... you need to know the &lt;code&gt;${team_id}&lt;&#x2F;code&gt; of the slack instance you are interested in and sometimes the &lt;code&gt;${cache_buster_hash}&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;That is hard if you didn&#x27;t save it somewhere before you got kicked off for spamming &lt;code&gt;:flag-ua::muscle::flag-ua:&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;So far I have not found any unauthenticated way to get that &lt;code&gt;${team_id}&lt;&#x2F;code&gt; but the &lt;code&gt;:squirrel:&lt;&#x2F;code&gt; trick is great
+to confirm a slack instance.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conculsion-faq&quot;&gt;Conculsion &#x2F; FAQ&lt;&#x2F;h2&gt;
+&lt;p&gt;Is Slack emojis good for storing important information?&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;No, but this is not an invitation to start using GUID&#x27;s as emoji names nor to stop making wholesome memes of colleagues &lt;strong&gt;with their consent&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;So why are Slack emojis public?&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;lol, no idea. Probably cause of some &lt;del&gt;legacy&lt;&#x2F;del&gt; money generating systems&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Should I save my companies Slack&#x27;s &lt;code&gt;${team_id}&lt;&#x2F;code&gt; before I leave so I can download all my emojis later??&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Nah. Just treat your favourte emojis like NFT&#x27;s, &lt;code&gt;right-click &amp;gt; Save Image As ...&lt;&#x2F;code&gt; them cause who knows when the server is going offline.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+</description>
+      </item>
+    </channel>
+</rss>

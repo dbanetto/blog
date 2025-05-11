@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+	<meta name='theme-color' content='#ffffff'>
+	<meta name='msapplication-TileColor' content='#da532c'>
+	<link rel='manifest' href='&#x2F;icons&#x2F;site.webmanifest'>
+	<link rel='mask-icon' href='&#x2F;icons&#x2F;safari-pinned-tab.svg' color='#5bbad5' />
+	<link rel='icon' type='image/png' sizes='16x16' href='&#x2F;icons&#x2F;favicon-16x16.png' />
+	<link rel='icon' type='image/png' sizes='32x32' href='&#x2F;icons&#x2F;favicon-32x32.png' />
+	<link rel='apple-touch-icon' sizes='180x180' href='&#x2F;icons&#x2F;apple-touch-icon.png' />
+
+	<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css' />
+	<link rel="stylesheet"
+		href="https://cdnjs.cloudflare.com/ajax/libs/galleria/1.6.1/themes/twelve/galleria.twelve.min.css" />
+    
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.rnett.nz/rss.xml">
+    
+
+	<link rel='stylesheet' href='https://blog.rnett.nz/site.css' />
+
+	
+	
+
+	<title>Title can be filled in later | AWS SSO Deeeep Dive</title>
+</head>
+
+<body class='site'>
+	
+	<nav class='navbar is-light' role='navigation' aria-label='main navigation'>
+		<div class='container'>
+			<div class='navbar-brand'>
+				<a class='navbar-item has-text-weight-bold' href='/'>Title can be filled in later</a>
+				<a role='button' class='navbar-burger burger' aria-label='menu' aria-expanded='false'
+					data-target='navMenu'>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+				</a>
+			</div>
+
+			<div id='navMenu' class='navbar-menu'>
+				<div class='navbar-end'>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;' class='navbar-item'>
+						Home
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;posts' class='navbar-item'>
+						Posts
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;tags' class='navbar-item'>
+						Tags
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;categories' class='navbar-item'>
+						Categories
+					</a>
+					
+					<div class='navbar-item'>
+						<div class='field has-addons'>
+							<div class='control'>
+								<input id='nav-search' class='input is-small' type='search' placeholder='Search'
+									data-target="#search-modal">
+							</div>
+							<div class='control'>
+								<a class='button is-small'>🔎</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+	
+
+	<div id="search-modal" class="modal">
+		<div class="modal-background"></div>
+		<div class="modal-content">
+			<div class='field'>
+				<p class='control has-icons-right'>
+					<input id='search' class='input' type='search' placeholder='Search this website.'>
+					<span class='icon is-small is-right'>🔎</span>
+				</p>
+			</div>
+			<div class='search-results'>
+				<div class='search-results__items'>
+				</div>
+			</div>
+		</div>
+		<button class="modal-close is-large" aria-label="close"></button>
+	</div>
+
+	
+	
+
+	
+<main class='section'>
+	<div class='container'>
+		<div class='columns'>
+			<div class='column is-10 is-offset-1'>
+				<article>
+					<h1 class='title'>AWS SSO Deeeep Dive</h1>
+					<h2 class='subtitle'>A look at AWS SSO &amp; how it looks from an end-user prospective</h2>
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+<p class='has-text-grey'>
+	David published on <time datetime='2021-04-11'>April 11, 2021</time>
+</p>
+
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+<p class='has-text-grey'>
+	🕰️ 6 min, 1056 words
+</p>
+
+						</div>
+					</div>
+
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Categories:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/categories/tech/'>
+		tech
+	</a>
+	
+</p>
+
+							
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Tags:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/aws/'>
+		aws
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/sso/'>
+		sso
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/identity/'>
+		identity
+	</a>
+	
+</p>
+
+							
+						</div>
+					</div>
+
+					
+					<hr />
+					<div class='content'>
+						<p class='has-text-weight-bold'>Table of Contents</p>
+						<ul>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-sso-deep-dive/#what-is-even-sso'>What is even SSO?!</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-sso-deep-dive/#the-lab-setup'>The &quot;Lab&quot; Setup</a>
+									</li>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-sso-deep-dive/#what-has-that-done'>What has that done?</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-sso-deep-dive/#self-plug'>Self-plug</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-sso-deep-dive/#take-aways'>Take Aways</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-sso-deep-dive/#extra-reading'>Extra Reading</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+						</ul>
+					</div>
+					
+
+					
+					<hr />
+
+					<div class='content has-text-justified'>
+						<!--
+ What to cover:
+  - intro to AWS SSO
+  - What the cli experience is like
+  - What APIs are happening
+-->
+<h1 id="what-is-even-sso">What is even SSO?!</h1>
+<p>SSO is the fancy TLA for <strong>S</strong>ingle <strong>S</strong>ign <strong>O</strong>n, which is the great of idea
+of having just having to login into one place &amp; then authenticate into other
+services when you want to. Some kind people have put great effort into the
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://en.wikipedia.org/wiki/Single_sign-on">Wikipeia</a> page for it,
+recommended to get more familiar with the idea.</p>
+<p>Generally it is a very <em>Enterprise Plan</em> feature so us mere
+mortals that cannot pay the usual USD$50/user/month (minimum 50 users) don't get to see it much.
+Of course with the exception of the "Social" logins ("Sign in with Facebook/Google")
+and AWS that provides it FOR FREE.</p>
+<blockquote>
+<p><strong>Note</strong>: that none of these companies named sponsored this post</p>
+</blockquote>
+<h2 id="the-lab-setup">The "<em>Lab</em>" Setup</h2>
+<ul>
+<li>
+<p>Developer account for <a rel="noopener nofollow noreferrer" target="_blank" href="https://developer.okta.com/">Okta</a></p>
+</li>
+<li>
+<p>Free tier <a rel="noopener nofollow noreferrer" target="_blank" href="https://aws.amazon.com/">AWS Account</a></p>
+</li>
+<li>
+<p>Use <a rel="noopener nofollow noreferrer" target="_blank" href="https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html">AWS CLI v2</a>, SSO support is only in V2+</p>
+</li>
+<li>
+<p>Setting up basic use of <a rel="noopener nofollow noreferrer" target="_blank" href="https://docs.aws.amazon.com/singlesignon/latest/userguide/okta-idp.html">Okta as the <strong>Id</strong>entity <strong>P</strong>rovider (IdP)</a></p>
+</li>
+</ul>
+<blockquote>
+<p>I will not be going through how to setup this "<em>lab</em>", AWS &amp; Okta have some
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://docs.aws.amazon.com/singlesignon/latest/userguide/okta-idp.html">nice docs</a> on how to</p>
+</blockquote>
+<p>To start, the native way of getting credentials for a session are the following:</p>
+<pre style="background-color:#f9f9f9;color:#111111;"><code><span>aws sso login &lt;profile_name&gt;
+</span></code></pre>
+<p>And from there lets see what has done.</p>
+<h2 id="what-has-that-done">What has that done?</h2>
+<p>There is some new mess in your <code>~/.aws</code> folder.</p>
+<pre style="background-color:#f9f9f9;color:#111111;"><code><span>&gt; find ~/.aws -exec file {} \;
+</span><span>~/.aws: directory
+</span><span>~/.aws/config: ASCII text
+</span><span>~/.aws/cli: directory
+</span><span>~/.aws/cli/cache: directory
+</span><span>~/.aws/cli/cache/0000000000000000000000000000000000000000.json: JSON data
+</span><span>~/.aws/sso: directory
+</span><span>~/.aws/sso/cache: directory
+</span><span>~/.aws/sso/cache/botocore-client-id-ap-southeast-9.json: JSON data
+</span><span>~/.aws/sso/cache/1111111111111111111111111111111111111111.json: JSON data
+</span></code></pre>
+<p>And in the <code>~/.aws/config</code> there is now a profile</p>
+<pre style="background-color:#f9f9f9;color:#111111;"><code><span>[profile RoleAccess-000000000000]
+</span><span>sso_start_url = https://d-0000000000.awsapps.com/start#/
+</span><span>sso_region = ap-southeast-9
+</span><span>sso_account_id = 000000000000
+</span><span>sso_role_name = RoleAccess
+</span></code></pre>
+<h3 id="cache-files">Cache files?!</h3>
+<p>Those cache files are new and interesting. So what are in those?</p>
+<h4 id="cli-cache">CLI cache</h4>
+<p><code>~/.aws/cli/cache/0000000000000000000000000000000000000000.json</code></p>
+<pre data-lang="json" style="background-color:#f9f9f9;color:#111111;" class="language-json "><code class="language-json" data-lang="json"><span>{
+</span><span>  </span><span style="color:#839c00;">&quot;ProviderType&quot;</span><span>: </span><span style="color:#839c00;">&quot;sso&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;Credentials&quot;</span><span>: {
+</span><span>    </span><span style="color:#839c00;">&quot;AccessKeyId&quot;</span><span>: </span><span style="color:#839c00;">&quot;ASIA0000000000000000&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;SecretAccessKey&quot;</span><span>: </span><span style="color:#839c00;">&quot; -- classic secret access key high entropy stuff here --&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;SessionToken&quot;</span><span>: </span><span style="color:#839c00;">&quot; -- big old session token --&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;Expiration&quot;</span><span>: </span><span style="color:#839c00;">&quot;2021-02-11T09:12:40Z&quot;
+</span><span>  }
+</span><span>}
+</span></code></pre>
+<p>Taking these credentials out they actually work.</p>
+<p>So this looks like how AWS CLI v2 handles your SSO sessions and just keeps them
+to the side for you.</p>
+<p>The file name looks to be a hash so guessing the name is pretty hard for a file
+inclusion attack unlike the ye 'old <code>~/.aws/credentials</code>.</p>
+<p>Though these look to be stable hashes per profile.</p>
+<h4 id="sso-file">SSO File</h4>
+<p><code>~/.aws/sso/cache/1111111111111111111111111111111111111111.json</code></p>
+<pre data-lang="json" style="background-color:#f9f9f9;color:#111111;" class="language-json "><code class="language-json" data-lang="json"><span>{
+</span><span>  </span><span style="color:#839c00;">&quot;startUrl&quot;</span><span>: </span><span style="color:#839c00;">&quot;https://d-0000000000.awsapps.com/start#/&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;region&quot;</span><span>: </span><span style="color:#839c00;">&quot;ap-southeast-9&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;accessToken&quot;</span><span>: </span><span style="color:#839c00;">&quot;eyJlbmMiOiJBMjU2R0NNIiwidGFnIjoiSm5udXRHU0tKTVVTb1RqRyIsImFsZyI6IkEyNTZHQ01LVyIsIml2IjoiazNiZXlaeEtDR0otc05VQyJ9.AYABeObaD6db3xtlf2VyQV4uZbcAHwABABBEYXRhUGxhbmVTZXNzaW9uAAlQZXJlZ3JpbmUAAQAHYXdzLWttcwBQYXJuOmF3czprbXM6YXAtc291dGhlYXN0LTI6NDEyMjAxMDI1ODU4OmtleS9kMTEwZTQ1ZC1mMGVhLTQ4NTYtYmFjNS0xMmMyYTMxM2Q2YWEAuAECAQB4Pcqs65qFZyXWdyHZA9hnHzXOhvyEOzDstw3xH4zNak0BY6qRWzxkq86qEu6rfKsXwQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDLXUMJLzS47DezlQSAIBEIA7lHcufjSiF9_gCd_IcRwk9NoCCnr9JmXvmWygjueAsEigiiXZ3WUF-K64_lSWTdaT9dC8rGDIh2-nEjoCAAAAAAwAABAAAAAAAAAAAAAAAAAAAFNQZGeo3pZnmaTvFFpgff____8AAAABAAAAAAAAAAAAAAABAAAAIAoOunYoPR2JIAc65uLD1QkKwC7dH1NzyRkba108s0-XEVJFBRIH1bPqAUpp7NaJyg.dzmoGCWoLlq-x4GZ.IHhQ2ffvTLAQQfffWXu9QvnEg1dir26R1HZ5gcNX1QcScFq15-AE_9ylR9djZyTv2qCk3xHRdx26oGhhK50m6DbryV2wy1OsEL_UpbAdt4x18upnSJsQXEcnug9mEbdP8P-XtXCzhCMT2yCahatqvsifKagyInM2vQATNZRc87r2pM4qy_z4h3rmzBpvXw6_lQ5AN7gZXN1urAGELHGanrHzkCX80msZskK1_RFIQbO0HADjfTnEeK1UmNXaXpFbq2oMI-NHIbkGsf8_XhY3AFX-EZfqS_MmgPAQAJ-fTF4P8vlJ4-UHQTX3onws_v3LWoqGA8Tlf-Vrf76mqUqN-ZUtnsUeP-0NVy2dDZu3z54xghta40Dbly9QVItaGzB9oSXJKn-NwiBdKxm6F0BhC9TShFghZ-k9P0JFCuHvl7lKlETTSH1tnQXlRvTlAwN7hagZWMqw91fZgg9v_Ujc6w.zj3d2TiDLW7ajD5NVf6P0A&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;expiresAt&quot;</span><span>: </span><span style="color:#839c00;">&quot;2021-02-11T16:12:30Z&quot;
+</span><span>}
+</span></code></pre>
+<p>Hmm a string starting with <code>ey</code>?! Is this a JWT?!</p>
+<p>Header contains the following.</p>
+<pre data-lang="json" style="background-color:#f9f9f9;color:#111111;" class="language-json "><code class="language-json" data-lang="json"><span>{
+</span><span>  </span><span style="color:#839c00;">&quot;enc&quot;</span><span>: </span><span style="color:#839c00;">&quot;A256GCM&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;tag&quot;</span><span>: </span><span style="color:#839c00;">&quot;JnnutGSKJMUSoTjG&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;alg&quot;</span><span>: </span><span style="color:#839c00;">&quot;A256GCMKW&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;iv&quot;</span><span>: </span><span style="color:#839c00;">&quot;k3beyZxKCGJ-sNUC&quot;
+</span><span>}
+</span></code></pre>
+<p>There is a few crypto stuff that has gone over my head, but from searching for
+the algorithm (under <code>alg</code> key) <code>A256GCMKW</code> found a <a rel="noopener nofollow noreferrer" target="_blank" href="https://stackoverflow.com/questions/38122521/what-is-the-algorithm-string-for-agcm256-kw-in-java-cryptography-to-be-used-i">helpful StackOverflow
+thread</a>.
+The key points I got from it are</p>
+<ul>
+<li><code>AES256</code> encryption algorithm used with the following options,</li>
+<li><code>GCM</code> - to detonate it is in <code>GCM</code> mode</li>
+<li><code>KW</code> - to detonate that key wrapping is used</li>
+</ul>
+<p>Does this help much? Not really.</p>
+<p>Now for the body (decoded by the <a rel="noopener nofollow noreferrer" target="_blank" href="https://gchq.github.io/CyberChef/">CyberChef themselves</a>)</p>
+<pre data-lang="text" style="background-color:#f9f9f9;color:#111111;" class="language-text "><code class="language-text" data-lang="text"><span>...xæÚ.§[ß.e.erA^.e·......DataPlaneSession.	Peregrine....aws-kms.Parn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa.¸....x=Ê¬ë..g%Öw!Ù.Øg.5Î.ü.;0ì·
+</span><span>ñ..ÍjM.cª.[&lt;d«Îª.î«|«.Á...~0|.	*.H.÷
+</span><span>... o0m...0h.	*.H.÷
+</span><span>...0..	`.H.e....0...µÔ0.óK.Ã{9PH....;.w.~4¢.Ø.t..ÂOM  §¯Òf^ù.Ê.îx....¢].ÖPRºâT.MÖ.õÐ¼¬`È.iÄ.........................Ô..ê7¥.æi;Å....À...@...........@.....®...GbH.Î¹¸°õBB°.·GÔÜòFFÚ×O,Ñq.$PQ }[&gt; .¦.Íh. w9¨.%¨.Z±àfH..6}ûÓ,..}÷Ö^ïP¾q ÕØ«Û¤u..`pÕõAÄ...y.Or..]...¿j..|GEÜvê.¡.®t. Û¯%vÃ-N°BÔ¥°.·.uòêgH..\G&#39;º.f.·Oðõí\,á.ÄöÈ&amp;¡jÚ¯²&#39;Êj...Í¯@.Íe.&lt;î½©3.²Ï.w®lÁ¦õðêT9.Þàesuº°..±ÆjzÇÎ@.óI¬fÉ
+</span><span>Õ.HA³´..ã}9Äx.T.ÕÚ^.[«j. ÑÈnA¬.Åácp.\F_©#&amp;.ð...Ó..ü¾RxPt._z&#39;ÂË÷-j*....õk.¾¦©J.eKg±G.ÐÕrÙÐÙ»|ùã.!µ®4
+</span><span>¹rõ.Hµ¡³.Ú.\.§7..t¬fè]../SJ.`..=?BE
+</span><span>áï.¹J.DÓH}m..åFôå..{.¨.XÊ°÷WÙ..oR7:Ä
+</span></code></pre>
+<p>Um... wat?! This looks very cyber encrypted but also is that a ARN in there?
+And what is this <code>DataPlaneSession</code>?!</p>
+<p>That KMS key id <code>arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa</code> is a bit strange.
+The account id is not one of <em>mine</em>, so it must be an AWS managed account. So
+lets try some basic KMS operations on the key to see if there is a permissive
+key policy.</p>
+<pre data-lang="bash" style="background-color:#f9f9f9;color:#111111;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#3e999f;">&gt;</span><span> aws </span><span style="color:#c82728;">kms</span><span style="color:#4271ae;"> describe-key</span><span style="color:#f07219;"> --region</span><span style="color:#4271ae;"> ap-southeast-2</span><span style="color:#f07219;"> --key-id</span><span style="color:#4271ae;"> arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa
+</span><span>
+</span><span style="color:#c82728;">An</span><span style="color:#4271ae;"> error occurred (AccessDeniedException</span><span>) </span><span style="color:#c82728;">when</span><span style="color:#4271ae;"> calling the DescribeKey operation:
+</span><span>
+</span><span style="color:#3e999f;">&gt;</span><span> aws </span><span style="color:#c82728;">kms</span><span style="color:#4271ae;"> encrypt</span><span style="color:#f07219;"> --region</span><span style="color:#4271ae;"> ap-southeast-2</span><span style="color:#f07219;"> --key-id</span><span style="color:#4271ae;"> arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa</span><span style="color:#f07219;"> --plaintext </span><span style="color:#839c00;">&quot;$(</span><span style="color:#4271ae;">echo lol </span><span style="color:#3e999f;">| </span><span style="color:#c82728;">base64</span><span style="color:#4271ae;"> -</span><span style="color:#839c00;">)&quot;
+</span><span>
+</span><span style="color:#c82728;">An</span><span style="color:#4271ae;"> error occurred (AccessDeniedException</span><span>) </span><span style="color:#c82728;">when</span><span style="color:#4271ae;"> calling the Encrypt operation:
+</span><span>
+</span><span style="color:#3e999f;">&gt;</span><span> aws </span><span style="color:#c82728;">kms</span><span style="color:#4271ae;"> decrypt</span><span style="color:#f07219;"> --region</span><span style="color:#4271ae;"> ap-southeast-2</span><span style="color:#f07219;"> --key-id</span><span style="color:#4271ae;"> arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa</span><span style="color:#f07219;"> --ciphertext-blob </span><span style="color:#839c00;">&quot;$(</span><span style="color:#c82728;">base64</span><span style="color:#4271ae;"> jwt_body</span><span style="color:#839c00;">)&quot;
+</span><span>
+</span><span style="color:#c82728;">An</span><span style="color:#4271ae;"> error occurred (InvalidCiphertextException</span><span>) </span><span style="color:#c82728;">when</span><span style="color:#4271ae;"> calling the Decrypt operation:
+</span></code></pre>
+<p>Ok, so that is mostly a no from what I know about KMS keys. Though that <code>InvalidCiphertextException</code> might be an <a rel="noopener nofollow noreferrer" target="_blank" href="https://en.wikipedia.org/wiki/Oracle_attack">oracle vector</a>.</p>
+<p>I do wonder if it is the same KMS key for everyone that has deployed their SSO
+into that region or if it is per customer.</p>
+<p>The former might allow a path for token reuse between SSO instances, while the
+latter would mean a $1/month/per customer instance fee for the SSO team that they
+are kindly not passing onto the customer (please thank your local SSO team
+member today).</p>
+<p>If I ever get around to make more SSO instances I'll update this post with
+those findings.</p>
+<h4 id="signature-section">Signature section</h4>
+<p>There isn't really anything we can get from this section as the algorithm is
+symmetric (AES) so we are not gonna get anything from it.</p>
+<h3 id="access-token">Access Token</h3>
+<p>Jumping back a bit, but that <code>accessToken</code> in <code>~/.aws/sso/cache/1111111111111111111111111111111111111111.json</code> file is really interesting.
+It is used with the AWS SSO API to vend out access keys into accounts.</p>
+<p>It is essentially a replacement for your login credentials to your IdP, MFA and
+all but with a time boxed existence.
+From this token you can iterate all your accounts you have access to, the
+roles in each of those accounts and then generate access keys for them.</p>
+<p>The flow goes:</p>
+<ul>
+<li><code>sso:ListAccounts</code> - takes the access token. Returns a list of accounts that
+the token can access</li>
+<li><code>sso:ListAccountRoles</code> - takes the access token, and account id. Returns a
+list of roles the token can use in said account</li>
+<li><code>sso:GetRoleCredentials</code> - takes the access token, account id and role name.
+Returns working access keys for the role in said account.</li>
+</ul>
+<p>For details about these actions have a look at the <a rel="noopener nofollow noreferrer" target="_blank" href="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sso.html">Boto3 docs for SSO service</a></p>
+<p>These actions are recorded in CloudTrail. To be honest I am surprised as these
+are at all since they are using Access Tokens instead of <code>STS</code> access keys.</p>
+<p>Here is an example event:</p>
+<pre data-lang="json" style="background-color:#f9f9f9;color:#111111;" class="language-json "><code class="language-json" data-lang="json"><span>{
+</span><span>    </span><span style="color:#839c00;">&quot;eventVersion&quot;</span><span>: </span><span style="color:#839c00;">&quot;1.08&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;userIdentity&quot;</span><span>: {
+</span><span>        </span><span style="color:#839c00;">&quot;type&quot;</span><span>: </span><span style="color:#839c00;">&quot;Unknown&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;principalId&quot;</span><span>: </span><span style="color:#839c00;">&quot;aaaaaaaaaa-bbbbbbbb-cccc-dddd-eeee-ffffffffffff&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;accountId&quot;</span><span>: </span><span style="color:#839c00;">&quot;000000000000&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;userName&quot;</span><span>: </span><span style="color:#839c00;">&quot;user@example.com&quot;
+</span><span>    },
+</span><span>    </span><span style="color:#839c00;">&quot;eventTime&quot;</span><span>: </span><span style="color:#839c00;">&quot;2021-03-28T00:26:05Z&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;eventSource&quot;</span><span>: </span><span style="color:#839c00;">&quot;sso.amazonaws.com&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;eventName&quot;</span><span>: </span><span style="color:#839c00;">&quot;ListAccountRoles&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;awsRegion&quot;</span><span>: </span><span style="color:#839c00;">&quot;ap-southeast-2&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;sourceIPAddress&quot;</span><span>: </span><span style="color:#839c00;">&quot;8.8.8.8&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;userAgent&quot;</span><span>: </span><span style="color:#839c00;">&quot;Boto3/1.17.5 Python/3.9.2 Linux/5 Botocore/1.20.5&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;requestParameters&quot;</span><span>: </span><span style="color:#f07219;">null</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;responseElements&quot;</span><span>: </span><span style="color:#f07219;">null</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;requestID&quot;</span><span>: </span><span style="color:#839c00;">&quot;7e0ffa90-e6cc-497a-982e-42ef7db5b415&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;eventID&quot;</span><span>: </span><span style="color:#839c00;">&quot;b02878f9-a936-4027-9338-16fdba509113&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;readOnly&quot;</span><span>: </span><span style="color:#f07219;">true</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;eventType&quot;</span><span>: </span><span style="color:#839c00;">&quot;AwsServiceEvent&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;managementEvent&quot;</span><span>: </span><span style="color:#f07219;">true</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;eventCategory&quot;</span><span>: </span><span style="color:#839c00;">&quot;Management&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;recipientAccountId&quot;</span><span>: </span><span style="color:#839c00;">&quot;000000000000&quot;</span><span>,
+</span><span>    </span><span style="color:#839c00;">&quot;serviceEventDetails&quot;</span><span>: {
+</span><span>        </span><span style="color:#839c00;">&quot;account_id&quot;</span><span>: </span><span style="color:#839c00;">&quot;000000000000&quot;
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h1 id="self-plug">Self-plug</h1>
+<p>From working with SSO I hobbled together a couple of scripts to automate the
+setup of some of the annoying parts of AWS SSO, namely <code>aws sso login</code>
+ssuucckks.</p>
+<p>You get shoved to a browser every time when you got perfectly good cached
+credentials on disk! So these scripts <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/drbarnz/aws-sso-tools">drbarnz/aws-sso-tools</a>
+handle most of the time when you have to use that command.</p>
+<ul>
+<li>Initial login</li>
+<li>Switching profiles (account/role)</li>
+<li>Generating profiles in <code>~/.aws/config</code></li>
+</ul>
+<h1 id="take-aways">Take Aways</h1>
+<ul>
+<li>SSO is cool if you want short lived credentials locally available</li>
+<li><code>~/.aws/credentials</code> are out <code>~/.aws/cli/${HASH}.json</code> are in for access
+keys</li>
+<li><code>~/.aws/sso/cache/${HAS}.json</code>'s <code>accessToken</code> is same as login credentials
+but time boxed</li>
+<li>SSO sessions do not make a mess of environment variables</li>
+</ul>
+<h2 id="extra-reading">Extra Reading</h2>
+<ul>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://docs.aws.amazon.com/singlesignon/latest/userguide/understanding-key-concepts.html">AWS SSO's docs on SSO</a></li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sso.html">Boto3 docs for SSO service</a></li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/drbarnz/aws-sso-tools">AWS SSO tooling</a></li>
+</ul>
+
+					</div>
+				</article>
+
+				<hr />
+				
+				
+			</div>
+		</div>
+	</div>
+</main>
+
+
+	
+	<footer class='footer py-2'>
+		<div class='has-text-centered'>
+			<p class="mb-1">
+				Built with 💻 code and 💖 love
+            </p>
+			<p class="mt-1">
+				Powered By 🐾 Zola
+			</p>
+		</div>
+	</footer>
+	
+
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js'></script>
+	<script src='https://blog.rnett.nz/search_index.en.js'></script>
+	<script src='https://blog.rnett.nz/js/site.js'></script>
+	
+	
+</body>
+
+</html>

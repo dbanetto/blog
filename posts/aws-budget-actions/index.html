@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+	<meta name='theme-color' content='#ffffff'>
+	<meta name='msapplication-TileColor' content='#da532c'>
+	<link rel='manifest' href='&#x2F;icons&#x2F;site.webmanifest'>
+	<link rel='mask-icon' href='&#x2F;icons&#x2F;safari-pinned-tab.svg' color='#5bbad5' />
+	<link rel='icon' type='image/png' sizes='16x16' href='&#x2F;icons&#x2F;favicon-16x16.png' />
+	<link rel='icon' type='image/png' sizes='32x32' href='&#x2F;icons&#x2F;favicon-32x32.png' />
+	<link rel='apple-touch-icon' sizes='180x180' href='&#x2F;icons&#x2F;apple-touch-icon.png' />
+
+	<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css' />
+	<link rel="stylesheet"
+		href="https://cdnjs.cloudflare.com/ajax/libs/galleria/1.6.1/themes/twelve/galleria.twelve.min.css" />
+    
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.rnett.nz/rss.xml">
+    
+
+	<link rel='stylesheet' href='https://blog.rnett.nz/site.css' />
+
+	
+	
+
+	<title>Title can be filled in later | Budgeting your way to Admin?</title>
+</head>
+
+<body class='site'>
+	
+	<nav class='navbar is-light' role='navigation' aria-label='main navigation'>
+		<div class='container'>
+			<div class='navbar-brand'>
+				<a class='navbar-item has-text-weight-bold' href='/'>Title can be filled in later</a>
+				<a role='button' class='navbar-burger burger' aria-label='menu' aria-expanded='false'
+					data-target='navMenu'>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+				</a>
+			</div>
+
+			<div id='navMenu' class='navbar-menu'>
+				<div class='navbar-end'>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;' class='navbar-item'>
+						Home
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;posts' class='navbar-item'>
+						Posts
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;tags' class='navbar-item'>
+						Tags
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;categories' class='navbar-item'>
+						Categories
+					</a>
+					
+					<div class='navbar-item'>
+						<div class='field has-addons'>
+							<div class='control'>
+								<input id='nav-search' class='input is-small' type='search' placeholder='Search'
+									data-target="#search-modal">
+							</div>
+							<div class='control'>
+								<a class='button is-small'>🔎</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+	
+
+	<div id="search-modal" class="modal">
+		<div class="modal-background"></div>
+		<div class="modal-content">
+			<div class='field'>
+				<p class='control has-icons-right'>
+					<input id='search' class='input' type='search' placeholder='Search this website.'>
+					<span class='icon is-small is-right'>🔎</span>
+				</p>
+			</div>
+			<div class='search-results'>
+				<div class='search-results__items'>
+				</div>
+			</div>
+		</div>
+		<button class="modal-close is-large" aria-label="close"></button>
+	</div>
+
+	
+	
+
+	
+<main class='section'>
+	<div class='container'>
+		<div class='columns'>
+			<div class='column is-10 is-offset-1'>
+				<article>
+					<h1 class='title'>Budgeting your way to Admin?</h1>
+					<h2 class='subtitle'>Exploration of AWS Budget actions as a baddie</h2>
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+<p class='has-text-grey'>
+	David published on <time datetime='2020-10-20'>October 20, 2020</time>
+</p>
+
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+<p class='has-text-grey'>
+	🕰️ 9 min, 1636 words
+</p>
+
+						</div>
+					</div>
+
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Categories:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/categories/security/'>
+		security
+	</a>
+	
+</p>
+
+							
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Tags:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/aws/'>
+		aws
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/budget/'>
+		budget
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/security/'>
+		security
+	</a>
+	
+</p>
+
+							
+						</div>
+					</div>
+
+					
+					<hr />
+					<div class='content'>
+						<p class='has-text-weight-bold'>Table of Contents</p>
+						<ul>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-budget-actions/#how-it-started'>How it started</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-budget-actions/#why-tho'>why tho?</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-budget-actions/#when-would-you-even-use-this'>When would you even use this?</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-budget-actions/#trying-it-out'>Trying it out</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-budget-actions/#the-humble-default-policy'>The humble default policy</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-budget-actions/#spy-vs-spy-time'>Spy vs. Spy time</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-budget-actions/#setting-the-scene'>Setting the scene</a>
+									</li>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-budget-actions/#red-team-are-going-in-with-the-attack'>Red team: are going in with the attack</a>
+									</li>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-budget-actions/#blue-team-you-activated-my-trap-card'>Blue team: you activated my trap card!</a>
+									</li>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-budget-actions/#implicit-nice-parts'>Implicit nice parts</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/aws-budget-actions/#conclusion'>Conclusion</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/aws-budget-actions/#my-takeaways'>My Takeaways</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+						</ul>
+					</div>
+					
+
+					
+					<hr />
+
+					<div class='content has-text-justified'>
+						<h1 id="how-it-started">How it started</h1>
+<p>Today I noticed a new AWS feature, you know one of the hundreds, that piqued my interest: <a rel="noopener nofollow noreferrer" target="_blank" href="https://aws.amazon.com/blogs/aws-cost-management/get-started-with-aws-budgets-actions/">Budget Actions</a> and the most interesting part to me is this section:</p>
+<blockquote>
+<p>AWS Budgets now allows you to configure actions [..] that will be applied [..] once a budget target has been exceeded.
+There are three action types: <strong>Identity and Access Management (IAM) policies, Service Control policies (SCPs)</strong>, or target running instances (EC2 or RDS).</p>
+</blockquote>
+<p>Or in other words: if you are paying too much for AWS you can
+react automagically by slapping an IAM policy or service control policy onto a thing.</p>
+<h1 id="why-tho">why tho?</h1>
+<p>On my first read of it I thought:</p>
+<blockquote>
+<p>This looks to be a new path to privilege escalation!</p>
+</blockquote>
+<h2 id="when-would-you-even-use-this">When would you even use this?</h2>
+<p>This lends itself to some cool use cases</p>
+<ul>
+<li>stop exporting spendy logs by denying it access to the S3 bucket (That's what I'll be using it for)</li>
+<li>big corporates might like to cut costs on training accounts with a
+<code>FinanceSayNo_DenyAll</code> SCP if you get too spendy</li>
+<li>got a spendy vendor hosting infrastructure in your account? Just stop their
+instances once they are over budget.</li>
+</ul>
+<h1 id="trying-it-out">Trying it out</h1>
+<p>So as anyone would with a free service, you click about for a while.</p>
+<p>The interesting parts I found about budgets (&amp; thus budget actions) is that you have them activate
+on not just cost but some service usage, like S3 or EC2 CPU credits, which is
+a super neat TIL.</p>
+<p>At the end of my clicking I quickly got side tracked by the requirement of an
+IAM role to be use.</p>
+<h2 id="the-humble-default-policy">The humble default policy</h2>
+<p>I feel like AWS knows IAM is pretty annoying when it provides you some
+some defaults to copy &amp; paste into a new role.</p>
+<p>And here they are:</p>
+<h3 id="default-trust-policy">Default trust policy</h3>
+<pre data-lang="json" style="background-color:#f9f9f9;color:#111111;" class="language-json "><code class="language-json" data-lang="json"><span>{
+</span><span>  </span><span style="color:#839c00;">&quot;Version&quot;</span><span>: </span><span style="color:#839c00;">&quot;2012-10-17&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;Statement&quot;</span><span>: [
+</span><span>    {
+</span><span>      </span><span style="color:#839c00;">&quot;Effect&quot;</span><span>: </span><span style="color:#839c00;">&quot;Allow&quot;</span><span>,
+</span><span>      </span><span style="color:#839c00;">&quot;Principal&quot;</span><span>: {
+</span><span>        </span><span style="color:#839c00;">&quot;Service&quot;</span><span>: </span><span style="color:#839c00;">&quot;budgets.amazonaws.com&quot;
+</span><span>      },
+</span><span>      </span><span style="color:#839c00;">&quot;Action&quot;</span><span>: </span><span style="color:#839c00;">&quot;sts:AssumeRole&quot;
+</span><span>    }
+</span><span>  ]
+</span><span>}
+</span></code></pre>
+<h3 id="default-permissions-policy">Default permissions policy</h3>
+<pre data-lang="json" style="background-color:#f9f9f9;color:#111111;" class="language-json "><code class="language-json" data-lang="json"><span>{
+</span><span>  </span><span style="color:#839c00;">&quot;Version&quot;</span><span>: </span><span style="color:#839c00;">&quot;2012-10-17&quot;</span><span>,
+</span><span>  </span><span style="color:#839c00;">&quot;Statement&quot;</span><span>: [
+</span><span>    {
+</span><span>      </span><span style="color:#839c00;">&quot;Effect&quot;</span><span>: </span><span style="color:#839c00;">&quot;Allow&quot;</span><span>,
+</span><span>      </span><span style="color:#839c00;">&quot;Action&quot;</span><span>: [
+</span><span>        </span><span style="color:#839c00;">&quot;ec2:DescribeInstanceStatus&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;ec2:StartInstances&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;ec2:StopInstances&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;iam:AttachGroupPolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;iam:AttachRolePolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;iam:AttachUserPolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;iam:DetachGroupPolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;iam:DetachRolePolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;iam:DetachUserPolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;organizations:AttachPolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;organizations:DetachPolicy&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;rds:DescribeDBInstances&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;rds:StartDBInstance&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;rds:StopDBInstance&quot;</span><span>,
+</span><span>        </span><span style="color:#839c00;">&quot;ssm:StartAutomationExecution&quot;
+</span><span>      ],
+</span><span>      </span><span style="color:#839c00;">&quot;Resource&quot;</span><span>: </span><span style="color:#839c00;">&quot;*&quot;
+</span><span>    }
+</span><span>  ]
+</span><span>}
+</span></code></pre>
+<h3 id="thoughts-on-these-policy">Thoughts on these policy</h3>
+<p>The permissions are pretty broad &amp; could cause a lot of damage on their own.
+Having the ability to attach policies to any of the three IAM principals is
+screaming to be misused with some managed policies.</p>
+<p>This policy is generated in the Console UI, so would be cool for them to tailor
+the permissions to resources selected in the UI. Be a nice secure by default
+option &amp; leave the full example in the doc pages.</p>
+<p>The saving grace is the trust policy only allowing the <code>budgets</code> service to use
+the role.</p>
+<p>That's enough IAM nerd snipping, they have their reasons.</p>
+<h1 id="spy-vs-spy-time">Spy vs. Spy time</h1>
+<p>Like all good services in AWS that can mess with permissions, it might be good
+to do some <em>threat modelling</em>.
+Now, for todays session will be pitting against Red (Attackers) &amp; Blue (Defenders) teams.</p>
+<blockquote>
+<p><em>(this is not just me typing with different coloured LED lighting, I swear)</em></p>
+</blockquote>
+<h2 id="setting-the-scene">Setting the scene</h2>
+<p>To set the scene for this cyber battle:</p>
+<ul>
+<li>Someone read the aforementioned AWS blog post &amp; decided to give it a go, using the provided default role policies it worked &amp; then went along their day</li>
+<li>The Red team in their wizardy ways have managed to get the AWS credentials
+of someone from Finance's Budgeting team that is reasonable scoped to the
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/glassechidna/trackiam/blob/master/policies/AWSBudgetsActionsWithAWSResourceControlAccess.json"><code>AWSBudgetsActionsWithAWSResourceControlAccess</code></a> policy.</li>
+<li>The Blue team are returning from their team lunch.</li>
+</ul>
+<p>The Red Team has a few goals it is going for:</p>
+<ul>
+<li>Elevating their own privilege</li>
+<li>Don't let any one stop their rampage</li>
+<li>Taking down <em>the site</em></li>
+</ul>
+<p>The Blue team wants none of that, but sometimes the best you can do is to know
+something is about.</p>
+<h2 id="red-team-are-going-in-with-the-attack">Red team: are going in with the attack</h2>
+<p>With their newly acquired Budget Team permissions they find scope at what they
+can even do in the budget service. To their surprise they find this blog post
+telling them exactly how to abuse these permissions!</p>
+<p>Fortunately the budget service has this great way to apply IAM policies to
+roles at events &amp; SCPs to organization units (OU).</p>
+<h3 id="elevating-their-own-privilege">Elevating their own privilege</h3>
+<p>First things first, get more permissions. Red Team wants it <strong>ALL</strong>.</p>
+<p>Someone want to try out this new priv-esc (what the kewl h@ck0rz call it) they
+saw using <code>budgets</code>. So they:</p>
+<ul>
+<li>Do the cloud <code>whoami</code> with the less succinct  <code>aws sys get-caller-identity</code></li>
+<li>Take stock, enumerate what permissions you got (there are some cool scripts
+for this like <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/andresriancho/enumerate-iam">andresriancho/enumerate-iam</a>)
+<ul>
+<li>the team learns they can list few things like IAM roles &amp; EC2
+<ul>
+<li>most importantly, listing IAM Roles includes trust policies</li>
+</ul>
+</li>
+<li>they also learn they got full access to <code>budgets</code></li>
+<li>they also discover the role setup for budget actions &amp; left unused for years</li>
+</ul>
+</li>
+</ul>
+<p>Putting 1 and 1 together they came up with a plan of attack:</p>
+<ol>
+<li>Make a new budget that notifies at 1 S3 API call</li>
+<li>Add a budget action to add the <code>AdministratorAccess</code> managed policy to their
+IAM principal</li>
+<li>???</li>
+<li>Profit</li>
+</ol>
+<p>Not long after laying the trap it springs &amp; they now got access to everything!</p>
+<p>They are now free to do it all &amp; order the <a rel="noopener nofollow noreferrer" target="_blank" href="https://aws.amazon.com/snowmobile/">Snowmobile</a> they always wanted.</p>
+<h3 id="continuing-the-rampage">Continuing the rampage</h3>
+<p>At this point it is pretty game over, but just to keep going until the Blue
+Team notices &amp; enjoying novelty of budget shinigans they keep going.</p>
+<p>Next, on the list from the blog post: service control policies</p>
+<p>So taking their previous knowledge, listing the SCPs in the account:</p>
+<ol>
+<li>Make a new budget that notifies at 1 S3 API call</li>
+<li>Add a budget action to add the <code>DenyAll</code> SCP that just happened to all the OUs</li>
+<li>???</li>
+<li>No AWS services for anyone</li>
+</ol>
+<blockquote>
+<p>It is worth noting that this will only work in the Organization root account</p>
+</blockquote>
+<h3 id="take-down-the-site">Take down the site</h3>
+<p>I think there is starting to be a pattern here... but this time targeting EC2 &amp;
+RDS instances.</p>
+<h3 id="bonus-some-things-i-didn-t-try-cause-it-takes-a-billing-cycle">BONUS: Some things I didn't try cause it takes a billing cycle</h3>
+<p>The docs say it may remove the policy that is added by the alert.</p>
+<p>So what happens if you add a policy that was already added?!</p>
+<p>For example, targeting the default SCP policy to allow all services. Will that just get removed
+at the start of the next billing cycle.
+I know from experience that if you remove that one out you just turn AWS control
+plane off killing any serverless apps.</p>
+<h2 id="blue-team-you-activated-my-trap-card">Blue team: you activated my trap card!</h2>
+<p>Since this service is behaving how it is suppose to &amp; seems pretty legitimate it
+is a bit hard to spot as it is happening. So I wouldn't blame them to be
+surprised when the Snowmobile shows up.</p>
+<p>I doubt they'll get caught with the same trick twice though, looking back there
+are some tells that tell a tall tale.</p>
+<h3 id="monitoring-alerts">Monitoring &amp; Alerts</h3>
+<p>There are a few places the Blue team can put some monitors &amp; alerts on:</p>
+<ul>
+<li>events relating to a human permissions</li>
+<li>events for attaching some juicy managed policies, like <code>AdministratorAccess</code> or
+<code>IAMFullAccess</code></li>
+<li>if budget events are infrequently changed, any event related to their
+change</li>
+<li>or if you have a CI/CD deploying the actions, monitor for actions not by the
+CI/CD</li>
+<li>events for old roles suddenly coming back to life</li>
+</ul>
+<p>This is not an exhaustive list but some starting points.</p>
+<p>Also worth pointing out these do not need to be paged on. No one likes
+noisy alerts, they're often worse than nothing. So be careful tuning alerts.</p>
+<h3 id="cleaning-up-old-iam-roles">Cleaning up old IAM roles</h3>
+<p>The previous role left was the keystone of the Red team's whole operation and
+it is the same story with like 90% of lateral movement maneuvers in AWS.</p>
+<p>Cleaning up old unused IAM roles is really important, you never really know</p>
+<blockquote>
+<p>The other 10% is over permissive IAM policies to make your own roles to
+maneuver through.</p>
+</blockquote>
+<h2 id="implicit-nice-parts">Implicit nice parts</h2>
+<p>By having to bring your own role (BYOR) for the service to use it does help mitigate
+most of the potential of a Red Team's fun with this new feature.</p>
+<h3 id="playing-by-your-own-rules">Playing by your own rules</h3>
+<p>First of all, your BYOR will be subject to your own SCPs in
+your account. So if you already got good guardrails in your SCPs that prevent
+silly things like attaching small managed policies like <code>AdministratorAccess</code>
+to a role then you'll be fine. If not, that might be a thing to look into.</p>
+<h3 id="it-doesn-t-have-aws-organization-magic">It doesn't have AWS Organization magic</h3>
+<p>Currently there is no direct support from AWS Organization.
+Which limits the scope that these can be applied on but does mean repetition
+across a fleet of AWS accounts.</p>
+<p>Though, on the plus side it also means you can't pull an
+Organization Cloudformation StackSet &amp; make a service-linked role with
+<code>AdministratorAccess</code> access all of the accounts with a click of a button
+(<em>that is always a good time</em>).</p>
+<p>If this ever does integrate with Organization, this feature will get added to the
+"why billing account access is scary list".</p>
+<h3 id="blast-radius">Blast radius</h3>
+<p>If the breach is not in the Organization root account, the damage is limited to
+just that account. That's with the assumption that accounts in a Organization stay
+completed separated, which is pretty generous.</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>As with most things AWS, the devil is in the IAM policy and what IAM Roles that
+get left around.</p>
+<p>There is nothing inherently wrong with this service or how it does about its
+merry day, it is just in conjunction with people using AWS it can lead to a bad
+time:tm:.</p>
+<h2 id="my-takeaways">My Takeaways</h2>
+<p>Some of my takeaways from writing this:</p>
+<ul>
+<li><strong>Unused IAM Roles can be dangerous: so clean up after yourself</strong></li>
+<li><strong>Monitoring helps</strong></li>
+<li><strong>Have guardrails around <em>juicy</em> managed IAM policies, it may save you
+later on</strong></li>
+<li><strong>New features in older services can lead to interesting paths to
+<code>AdministratorAccess</code>, I would say read their announcement feeds but there
+is too much so see if anyone makes a blog about it</strong></li>
+</ul>
+
+					</div>
+				</article>
+
+				<hr />
+				
+				
+			</div>
+		</div>
+	</div>
+</main>
+
+
+	
+	<footer class='footer py-2'>
+		<div class='has-text-centered'>
+			<p class="mb-1">
+				Built with 💻 code and 💖 love
+            </p>
+			<p class="mt-1">
+				Powered By 🐾 Zola
+			</p>
+		</div>
+	</footer>
+	
+
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js'></script>
+	<script src='https://blog.rnett.nz/search_index.en.js'></script>
+	<script src='https://blog.rnett.nz/js/site.js'></script>
+	
+	
+</body>
+
+</html>

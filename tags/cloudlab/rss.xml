@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - cloudlab</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/tags/cloudlab/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 11 May 2025 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Cloudlab Kubernetes setup</title>
+          <pubDate>Sun, 11 May 2025 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/kubernetes-setup/</link>
+          <guid>https://blog.rnett.nz/posts/kubernetes-setup/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/kubernetes-setup/">&lt;h1 id=&quot;intro&quot;&gt;Intro&lt;&#x2F;h1&gt;
+&lt;p&gt;This post is about some of the things that I&#x27;ve learnt while setting
+up a small scale Kubernetes cluster for my &quot;cloudlab&quot; to learn from.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;settings-the-stage&quot;&gt;Settings the stage&lt;&#x2F;h2&gt;
+&lt;p&gt;At &lt;code&gt;$day_job&lt;&#x2F;code&gt; I work with a few Kubernetes clusters and in particular at the
+lower layers of the stack. Messing around with that tech is often needing to
+rebuild clusters and mess them up good.&lt;&#x2F;p&gt;
+&lt;p&gt;I have had a mulit-node homelab Kubernetes setup that got way too complicated
+and died at the hands of an operator failure that I couldn&#x27;t be bothered to recover from
+(TL;DR longhorn + changing CNI == not a good time).&lt;&#x2F;p&gt;
+&lt;p&gt;So, I decided to branch out of the old laptops under desk to the &lt;strong&gt;&lt;em&gt;THE CLOUD&lt;&#x2F;em&gt;&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I set out with the goal of:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Learn more about IPv6 &amp;amp; use with Kubernetes&lt;&#x2F;li&gt;
+&lt;li&gt;Strictly use the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway-api.sigs.k8s.io&#x2F;&quot;&gt;Gateway API&lt;&#x2F;a&gt; and be able to use &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway-api.sigs.k8s.io&#x2F;mesh&#x2F;&quot;&gt;GAMMA&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;Spending as little as a I can&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;selecting-an-cloud-infra-provider&quot;&gt;Selecting an ☁️ Infra provider&lt;&#x2F;h2&gt;
+&lt;p&gt;Selecting a provider is like trying to find a sticky Telco that you
+know you&#x27;ll be paying for until your cloudlab-phase passed away.
+So to help start the selecting process I came up with some metrics of
+success:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;At least 2 vCPUs&lt;&#x2F;li&gt;
+&lt;li&gt;At least 2 GiB RAM&lt;&#x2F;li&gt;
+&lt;li&gt;At least 100+ GiB of traffic, just in case&lt;&#x2F;li&gt;
+&lt;li&gt;Have a reasonable latency (&lt;em&gt;#JustAPACThings&lt;&#x2F;em&gt; ;-;)&lt;&#x2F;li&gt;
+&lt;li&gt;Cost to be less than AUD$10-per-node a month&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;After going through the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kubernetes&#x2F;autoscaler&#x2F;tree&#x2F;master&#x2F;cluster-autoscaler&#x2F;cloudprovider&quot;&gt;cluster-autoscaler&lt;&#x2F;a&gt; provider list I eventually
+landed on &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;hetzner.cloud&#x2F;?ref=FHajdRC5nJ8C&quot;&gt;Hetzner (my referral link)&lt;&#x2F;a&gt; as it is by &lt;em&gt;far&lt;&#x2F;em&gt; the cheapest provider, even with the currency conversion.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;infra-setup&quot;&gt;Infra setup&lt;&#x2F;h3&gt;
+&lt;p&gt;The original &quot;just get it working&quot; setup was:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;1 control plane node&lt;&#x2F;li&gt;
+&lt;li&gt;1 worker node&lt;&#x2F;li&gt;
+&lt;li&gt;1 Loadbalancer&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Using:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.talos.dev&#x2F;&quot;&gt;Talos&lt;&#x2F;a&gt; for Kubernetes distribution&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;cilium.io&#x2F;&quot;&gt;Cilium&lt;&#x2F;a&gt; for CNI, IPAM, and Ingress&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;hetznercloud&#x2F;hcloud-cloud-controller-manager&quot;&gt;hetznercloud&#x2F;hcloud-cloud-controller-manager&lt;&#x2F;a&gt; for load balancer&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;hetznercloud&#x2F;csi-driver&quot;&gt;hetznercloud&#x2F;csi-driver&lt;&#x2F;a&gt; for dynamic volumes&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kubernetes-sigs&#x2F;external-dns&#x2F;&quot;&gt;external-dns&lt;&#x2F;a&gt; to plumb load balancers to DNS&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h1 id=&quot;first-lesson-do-i-need-ipv4&quot;&gt;First lesson: Do I need IPv4?&lt;&#x2F;h1&gt;
+&lt;p&gt;I could save many cents a month if I did not use IPv4 addresses on Hetzner, so of course I tried
+to not use them. They give free IPv6 addresses for the nodes so I can still get some sweet
+internet!&lt;&#x2F;p&gt;
+&lt;p&gt;I hit a few snags along the way... like most of the internet is still only using IPv4 🧓.
+Which I did find some cool services to help get around that, namely &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;nat64.net&#x2F;&quot;&gt;nat64.net&lt;&#x2F;a&gt;
+which provides a DNS resolver and NAT64 to plug the gap.&lt;&#x2F;p&gt;
+&lt;p&gt;As a Talos patch this looked like:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yaml&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-yaml &quot;&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;machine&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;sysctls&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;net.ipv6.conf.all.forwarding&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;1
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;network&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;nameservers&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8e908c;&quot;&gt;# https:&#x2F;&#x2F;nat64.net&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;2a01:4f9:c010:3f02::1
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;2a01:4f8:c2c:123f::1
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;2a00:1098:2c::1
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;After which got the Talos control plane to a &lt;code&gt;Ready&lt;&#x2F;code&gt; state.&lt;&#x2F;p&gt;
+&lt;p&gt;Next problem... the Pod and Service IPs were not assigning correctly
+and all of the connectivity tests were failing once another node was added.&lt;&#x2F;p&gt;
+&lt;p&gt;Turned out that I was in a bit of a pickle cause Hetzner assigns whole &lt;code&gt;&#x2F;64&lt;&#x2F;code&gt;&#x27;s to each
+node with public IPv6 and they&#x27;re a bit random and discontinuous across nodes.
+Kubenretes does not yet support adding new Pod CIDR ranges and assigning them to single nodes
+natively. Cilium does have &lt;code&gt;CiliumNode&lt;&#x2F;code&gt; which can specify a &lt;code&gt;.spec.podCIDRs&lt;&#x2F;code&gt; but at this point
+I&#x27;ve been a month deep &amp;amp; was about to gave up on life with computers.&lt;&#x2F;p&gt;
+&lt;p&gt;So in the end I gave up on my dream of being IPv4-less and have dualstack on the nodes and the
+Kubernetes cluster itself are using private addresses.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;📝 &lt;strong&gt;Take away&lt;&#x2F;strong&gt;: Keep it simple for a first cluster! Come back for IPv6 later&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h1 id=&quot;second-lesson-why-do-i-need-a-load-balancer&quot;&gt;Second lesson: Why do I need a load balancer?&lt;&#x2F;h1&gt;
+&lt;p&gt;I got whole dedicated load balancer for my 1 worker node...
+That&#x27;s not very cost effective is it, but it was so easy to setup and get working.
+The control plane node is excluded from the pool due to its label
+&lt;code&gt;node.kubernetes.io&#x2F;exclude-from-external-load-balancers&lt;&#x2F;code&gt;.
+So lets remove that overkill load balancer!&lt;&#x2F;p&gt;
+&lt;p&gt;Previously I had been using &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.k3s.io&#x2F;networking&#x2F;networking-services#service-load-balancer&quot;&gt;&lt;code&gt;k3s&lt;&#x2F;code&gt;s&#x27; svclb&lt;&#x2F;a&gt;
+which uses the node&#x27;s IP as its &lt;code&gt;LoadBalancer&lt;&#x2F;code&gt; IPs instead of needing extenral virtual IPs.
+Luckily for me Cilium has a similar concept with &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.cilium.io&#x2F;en&#x2F;stable&#x2F;network&#x2F;node-ipam&#x2F;#node-ipam&quot;&gt;Node IPAM&lt;&#x2F;a&gt;!&lt;&#x2F;p&gt;
+&lt;p&gt;Now at this point I was using Cilium&#x27;s Gateway API implementation, which is... how do I put it.
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;cilium&#x2F;cilium&#x2F;pull&#x2F;39038&quot;&gt;Incomplete&lt;&#x2F;a&gt; and a &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway-api.sigs.k8s.io&#x2F;implementations&#x2F;v1.2&#x2F;&quot;&gt;leader&lt;&#x2F;a&gt; at the same time. So naturally I ran into issues in trying to use
+Node IPAM with Cilium&#x27;s Gateway API.&lt;&#x2F;p&gt;
+&lt;p&gt;The goal is to have the &lt;code&gt;v1.Service&lt;&#x2F;code&gt; of &lt;code&gt;cilium-&amp;lt;gateway-name&amp;gt;&lt;&#x2F;code&gt; to have &lt;code&gt;spec.loadBalancerClass: io.cilium&#x2F;node&lt;&#x2F;code&gt;.
+I ended needing to move to &lt;code&gt;v1.18.0-pre-release&lt;&#x2F;code&gt; (note &lt;em&gt;pre-release&lt;&#x2F;em&gt;) to use the new object
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;cilium&#x2F;cilium&#x2F;blob&#x2F;v1.18.0-pre.1&#x2F;pkg&#x2F;k8s&#x2F;apis&#x2F;cilium.io&#x2F;client&#x2F;crds&#x2F;v2alpha1&#x2F;ciliumgatewayclassconfigs.yaml&quot;&gt;&lt;code&gt;CiliumGatewayClassConfig&lt;&#x2F;code&gt;&lt;&#x2F;a&gt; object to configure the &lt;code&gt;loadBalancerClass&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;It would kinda work, but not for privileged ports (&amp;lt;1024), and if you set the
+&lt;code&gt;gatewayAPI.hostNetwork.enabled true&lt;&#x2F;code&gt; then it stops working. The latter becoming a culprit
+after finding this &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;cilium&#x2F;cilium&#x2F;issues&#x2F;38227#issuecomment-2734913950&quot;&gt;issue comment&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;After that I gave up on Cilium&#x27;s Gateway API and looked for another implementation that
+supports setting the &lt;code&gt;spec.loadBalancerClass&lt;&#x2F;code&gt; which to my surprise is two! 🤯&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway.envoyproxy.io&#x2F;docs&#x2F;api&#x2F;extension_types&#x2F;#envoyproxy&quot;&gt;envoy-gateway&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;istio.io&#x2F;latest&#x2F;docs&#x2F;tasks&#x2F;traffic-management&#x2F;ingress&#x2F;gateway-api&#x2F;#automated-deployment&quot;&gt;Istio&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;So I went with Istio in Ambient mode to complicate my setup more which removed the need
+for a dedicated load balancer. Now I&#x27;m relying on DNS client behavior to balance between
+my 1 node.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;📝&lt;strong&gt;Take away&lt;&#x2F;strong&gt;: Gateway API is really new, a lot of knobs are not available yet.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h1 id=&quot;conculsion&quot;&gt;Conculsion&lt;&#x2F;h1&gt;
+&lt;p&gt;I&#x27;ve learnt a lot from this cloudlab already:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;IPv6 takes more thought than expected and Hetzner&#x27;s implementation requires some extra concepts&lt;&#x2F;li&gt;
+&lt;li&gt;Gateway API might be GA but the implementations don&#x27;t feel like it&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</description>
+      </item>
+    </channel>
+</rss>

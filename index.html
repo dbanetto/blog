@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+	<meta name='theme-color' content='#ffffff'>
+	<meta name='msapplication-TileColor' content='#da532c'>
+	<link rel='manifest' href='&#x2F;icons&#x2F;site.webmanifest'>
+	<link rel='mask-icon' href='&#x2F;icons&#x2F;safari-pinned-tab.svg' color='#5bbad5' />
+	<link rel='icon' type='image/png' sizes='16x16' href='&#x2F;icons&#x2F;favicon-16x16.png' />
+	<link rel='icon' type='image/png' sizes='32x32' href='&#x2F;icons&#x2F;favicon-32x32.png' />
+	<link rel='apple-touch-icon' sizes='180x180' href='&#x2F;icons&#x2F;apple-touch-icon.png' />
+
+	<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css' />
+	<link rel="stylesheet"
+		href="https://cdnjs.cloudflare.com/ajax/libs/galleria/1.6.1/themes/twelve/galleria.twelve.min.css" />
+    
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.rnett.nz/rss.xml">
+    
+
+	<link rel='stylesheet' href='https://blog.rnett.nz/site.css' />
+
+	
+	
+
+	<title>Title can be filled in later</title>
+</head>
+
+<body class='site'>
+	
+	<nav class='navbar is-light' role='navigation' aria-label='main navigation'>
+		<div class='container'>
+			<div class='navbar-brand'>
+				<a class='navbar-item has-text-weight-bold' href='/'>Title can be filled in later</a>
+				<a role='button' class='navbar-burger burger' aria-label='menu' aria-expanded='false'
+					data-target='navMenu'>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+				</a>
+			</div>
+
+			<div id='navMenu' class='navbar-menu'>
+				<div class='navbar-end'>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;' class='navbar-item'>
+						Home
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;posts' class='navbar-item'>
+						Posts
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;tags' class='navbar-item'>
+						Tags
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;categories' class='navbar-item'>
+						Categories
+					</a>
+					
+					<div class='navbar-item'>
+						<div class='field has-addons'>
+							<div class='control'>
+								<input id='nav-search' class='input is-small' type='search' placeholder='Search'
+									data-target="#search-modal">
+							</div>
+							<div class='control'>
+								<a class='button is-small'>🔎</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+	
+
+	<div id="search-modal" class="modal">
+		<div class="modal-background"></div>
+		<div class="modal-content">
+			<div class='field'>
+				<p class='control has-icons-right'>
+					<input id='search' class='input' type='search' placeholder='Search this website.'>
+					<span class='icon is-small is-right'>🔎</span>
+				</p>
+			</div>
+			<div class='search-results'>
+				<div class='search-results__items'>
+				</div>
+			</div>
+		</div>
+		<button class="modal-close is-large" aria-label="close"></button>
+	</div>
+
+	
+	
+
+	
+<main class='hero'>
+	<div class='hero-body'>
+		<div class='container'>
+			<div class='columns'>
+				<div class='column is-10 is-offset-1'>
+					<figure class='image center'>
+						<img class='is-rounded card' src='&#x2F;images&#x2F;avatar.png' style='max-width: 180px'>
+					</figure>
+					<div class='has-text-centered'>
+						<h1 class='title'>{{ config.title }}</h1>
+						<h2 class='subtitle'>Here lies a collections of some of my ramblings</h2>
+						
+<p class='is-size-4'>
+	
+	<a class="link" href='https://github.com/dbanetto' target='_blank'>
+		<span class='icon is-medium'>
+			<i class='fab fa-github'></i>
+		</span>
+	</a>
+	
+	
+</p>
+
+					</div>
+					<div class='content has-text-justified mt-5'>
+						<h2 id="self-q-a-introduction-thingy">Self Q&amp;A introduction-thingy</h2>
+<p>No blog website is complete without some kind of a self-introduction and lucky
+for you it is right here on the landing page!</p>
+<p>If you were looking for the <a href="https://blog.rnett.nz/posts/">list of post(s) it is here</a></p>
+<p>Anyway, so here we go:</p>
+<h3 id="who-am-i">Who am I?</h3>
+<p>Great question, I would like to know as well. For what I do know</p>
+<p>I am paid to tap on the computers, it has been ride so far &amp; I have it on good
+authority that ride never ends.</p>
+<p>So far I've had to very <em>professionally</em> deal with these headaches:</p>
+<ul>
+<li><em>Kubernetes</em>, and making it do some interesting things.</li>
+<li><em>Bazel</em> to reproducibly build a lot of YAML.</li>
+<li><em>AWS IAM</em> &amp; account management, with too many accounts than anyone needs.</li>
+<li><em>Cyber</em> Security, mainly in the Cloud area, and some application stuff sprinkled in.</li>
+<li><em>Identity &amp; Access</em> management with a tree of too many people</li>
+<li>Shoving <em>Go</em>, <em>Python</em> and <em>Rust</em> code where it should &amp; should not <em>go</em>.</li>
+</ul>
+<p>Weirdly enough those will probably be the main topics of this place.</p>
+<h3 id="what-to-expect">What to expect?</h3>
+<p>An invariable level of writing ability that goes from stream of thoughts to
+an academia report that is due tomorrow.
+I won't delude any expectations that it is any good but at least I've
+had some fun writing it.</p>
+<h3 id="why-have-a-in-blog-in-the-good-year-of-current-year">Why have a in blog in the good year of {{ current_year }}?!</h3>
+<p>It is what all the cool cats do these days and I wanted to be apart of the cool
+crowd this time.</p>
+<p>Plus, it helps to form an idea by writing it down than just thinking about it on a bus.</p>
+<h3 id="what-do-i-really-want-this-for">What do I really want this for?</h3>
+<p>Really, my goal is to record some of my learnings so that others might be
+able to share the pain, save some time or even (big <em>IF</em> here) teach someone
+something.</p>
+<p>I am aware my main audience is myself in 5 months when I forget what I
+did in my old-er age &amp; am going through the pain again but that's not too bad IMO (you're doing great future me).</p>
+<h2 id="big-thanks-you">Big Thanks You</h2>
+<p>No one can get to where they are today with help. For me, I would never
+be able to make this site without these cool people, so big thanks to:</p>
+<ul>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://www.getzola.org">zola</a> for the static site generator this here site
+is made with.</li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/RatanShreshtha/DeepThought">RatanShreshtha/DeepThought</a>
+for the very snazzy theme.</li>
+<li>Might be wondering <em>"damn that's a cool pfp"</em> that was by the great
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://twitter.com/grubkiss">@grubkiss</a></li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://mango.pdf.zone/">mango.pdf.zone</a> or <a rel="noopener nofollow noreferrer" target="_blank" href="https://twitter.com/mangopdf">@mangopdf</a>, they have been a great inspiration in acceptable <del>memes</del> writing styles.</li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://twitter.com/__steele">@__steele</a> that has successfully started a co-woker blog race, with <a rel="noopener nofollow noreferrer" target="_blank" href="https://awsteele.com/">complementary blog link</a></li>
+<li>And You too, for spending your time &amp; data to see, read, wish you didn't then laugh at this meta text.</li>
+</ul>
+<h2 id="how-to-report-a-wrong">How to report a wrong</h2>
+<p>I'm a human, at least that is what the capatcha leads me to believe, therefore
+I err. If there is anything you feel like that should be corrected @ me on the
+socials at the top of this page and I'll do my best to correct it.</p>
+
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</main>
+
+
+	
+	<footer class='footer py-2'>
+		<div class='has-text-centered'>
+			<p class="mb-1">
+				Built with 💻 code and 💖 love
+            </p>
+			<p class="mt-1">
+				Powered By 🐾 Zola
+			</p>
+		</div>
+	</footer>
+	
+
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js'></script>
+	<script src='https://blog.rnett.nz/search_index.en.js'></script>
+	<script src='https://blog.rnett.nz/js/site.js'></script>
+	
+	
+</body>
+
+</html>

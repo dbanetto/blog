@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+	<meta name='theme-color' content='#ffffff'>
+	<meta name='msapplication-TileColor' content='#da532c'>
+	<link rel='manifest' href='&#x2F;icons&#x2F;site.webmanifest'>
+	<link rel='mask-icon' href='&#x2F;icons&#x2F;safari-pinned-tab.svg' color='#5bbad5' />
+	<link rel='icon' type='image/png' sizes='16x16' href='&#x2F;icons&#x2F;favicon-16x16.png' />
+	<link rel='icon' type='image/png' sizes='32x32' href='&#x2F;icons&#x2F;favicon-32x32.png' />
+	<link rel='apple-touch-icon' sizes='180x180' href='&#x2F;icons&#x2F;apple-touch-icon.png' />
+
+	<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css' />
+	<link rel="stylesheet"
+		href="https://cdnjs.cloudflare.com/ajax/libs/galleria/1.6.1/themes/twelve/galleria.twelve.min.css" />
+    
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.rnett.nz/rss.xml">
+    
+
+	<link rel='stylesheet' href='https://blog.rnett.nz/site.css' />
+
+	
+	
+
+	<title>Title can be filled in later | Cloudlab Kubernetes setup</title>
+</head>
+
+<body class='site'>
+	
+	<nav class='navbar is-light' role='navigation' aria-label='main navigation'>
+		<div class='container'>
+			<div class='navbar-brand'>
+				<a class='navbar-item has-text-weight-bold' href='/'>Title can be filled in later</a>
+				<a role='button' class='navbar-burger burger' aria-label='menu' aria-expanded='false'
+					data-target='navMenu'>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+				</a>
+			</div>
+
+			<div id='navMenu' class='navbar-menu'>
+				<div class='navbar-end'>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;' class='navbar-item'>
+						Home
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;posts' class='navbar-item'>
+						Posts
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;tags' class='navbar-item'>
+						Tags
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;categories' class='navbar-item'>
+						Categories
+					</a>
+					
+					<div class='navbar-item'>
+						<div class='field has-addons'>
+							<div class='control'>
+								<input id='nav-search' class='input is-small' type='search' placeholder='Search'
+									data-target="#search-modal">
+							</div>
+							<div class='control'>
+								<a class='button is-small'>🔎</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+	
+
+	<div id="search-modal" class="modal">
+		<div class="modal-background"></div>
+		<div class="modal-content">
+			<div class='field'>
+				<p class='control has-icons-right'>
+					<input id='search' class='input' type='search' placeholder='Search this website.'>
+					<span class='icon is-small is-right'>🔎</span>
+				</p>
+			</div>
+			<div class='search-results'>
+				<div class='search-results__items'>
+				</div>
+			</div>
+		</div>
+		<button class="modal-close is-large" aria-label="close"></button>
+	</div>
+
+	
+	
+
+	
+<main class='section'>
+	<div class='container'>
+		<div class='columns'>
+			<div class='column is-10 is-offset-1'>
+				<article>
+					<h1 class='title'>Cloudlab Kubernetes setup</h1>
+					<h2 class='subtitle'>Learning and being frugal</h2>
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+<p class='has-text-grey'>
+	David published on <time datetime='2025-05-11'>May 11, 2025</time>
+</p>
+
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+<p class='has-text-grey'>
+	🕰️ 5 min, 999 words
+</p>
+
+						</div>
+					</div>
+
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Categories:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/categories/tech/'>
+		tech
+	</a>
+	
+</p>
+
+							
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Tags:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/cloudlab/'>
+		cloudlab
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/homelab/'>
+		homelab
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/kubernetes/'>
+		kubernetes
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/k8s/'>
+		k8s
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/infra/'>
+		infra
+	</a>
+	
+</p>
+
+							
+						</div>
+					</div>
+
+					
+					<hr />
+					<div class='content'>
+						<p class='has-text-weight-bold'>Table of Contents</p>
+						<ul>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/kubernetes-setup/#intro'>Intro</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/kubernetes-setup/#settings-the-stage'>Settings the stage</a>
+									</li>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/kubernetes-setup/#selecting-an-cloud-infra-provider'>Selecting an ☁️ Infra provider</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/kubernetes-setup/#first-lesson-do-i-need-ipv4'>First lesson: Do I need IPv4?</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/kubernetes-setup/#second-lesson-why-do-i-need-a-load-balancer'>Second lesson: Why do I need a load balancer?</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/kubernetes-setup/#conculsion'>Conculsion</a>
+								
+							</li>
+							
+						</ul>
+					</div>
+					
+
+					
+					<hr />
+
+					<div class='content has-text-justified'>
+						<h1 id="intro">Intro</h1>
+<p>This post is about some of the things that I've learnt while setting
+up a small scale Kubernetes cluster for my "cloudlab" to learn from.</p>
+<h2 id="settings-the-stage">Settings the stage</h2>
+<p>At <code>$day_job</code> I work with a few Kubernetes clusters and in particular at the
+lower layers of the stack. Messing around with that tech is often needing to
+rebuild clusters and mess them up good.</p>
+<p>I have had a mulit-node homelab Kubernetes setup that got way too complicated
+and died at the hands of an operator failure that I couldn't be bothered to recover from
+(TL;DR longhorn + changing CNI == not a good time).</p>
+<p>So, I decided to branch out of the old laptops under desk to the <strong><em>THE CLOUD</em></strong>.</p>
+<p>I set out with the goal of:</p>
+<ul>
+<li>Learn more about IPv6 &amp; use with Kubernetes</li>
+<li>Strictly use the <a rel="noopener nofollow noreferrer" target="_blank" href="https://gateway-api.sigs.k8s.io/">Gateway API</a> and be able to use <a rel="noopener nofollow noreferrer" target="_blank" href="https://gateway-api.sigs.k8s.io/mesh/">GAMMA</a></li>
+<li>Spending as little as a I can</li>
+</ul>
+<h2 id="selecting-an-cloud-infra-provider">Selecting an ☁️ Infra provider</h2>
+<p>Selecting a provider is like trying to find a sticky Telco that you
+know you'll be paying for until your cloudlab-phase passed away.
+So to help start the selecting process I came up with some metrics of
+success:</p>
+<ul>
+<li>At least 2 vCPUs</li>
+<li>At least 2 GiB RAM</li>
+<li>At least 100+ GiB of traffic, just in case</li>
+<li>Have a reasonable latency (<em>#JustAPACThings</em> ;-;)</li>
+<li>Cost to be less than AUD$10-per-node a month</li>
+</ul>
+<p>After going through the <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudprovider">cluster-autoscaler</a> provider list I eventually
+landed on <a rel="noopener nofollow noreferrer" target="_blank" href="https://hetzner.cloud/?ref=FHajdRC5nJ8C">Hetzner (my referral link)</a> as it is by <em>far</em> the cheapest provider, even with the currency conversion.</p>
+<h3 id="infra-setup">Infra setup</h3>
+<p>The original "just get it working" setup was:</p>
+<ul>
+<li>1 control plane node</li>
+<li>1 worker node</li>
+<li>1 Loadbalancer</li>
+</ul>
+<p>Using:</p>
+<ul>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://www.talos.dev/">Talos</a> for Kubernetes distribution</li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://cilium.io/">Cilium</a> for CNI, IPAM, and Ingress</li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/hetznercloud/hcloud-cloud-controller-manager">hetznercloud/hcloud-cloud-controller-manager</a> for load balancer</li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/hetznercloud/csi-driver">hetznercloud/csi-driver</a> for dynamic volumes</li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/kubernetes-sigs/external-dns/">external-dns</a> to plumb load balancers to DNS</li>
+</ul>
+<h1 id="first-lesson-do-i-need-ipv4">First lesson: Do I need IPv4?</h1>
+<p>I could save many cents a month if I did not use IPv4 addresses on Hetzner, so of course I tried
+to not use them. They give free IPv6 addresses for the nodes so I can still get some sweet
+internet!</p>
+<p>I hit a few snags along the way... like most of the internet is still only using IPv4 🧓.
+Which I did find some cool services to help get around that, namely <a rel="noopener nofollow noreferrer" target="_blank" href="https://nat64.net/">nat64.net</a>
+which provides a DNS resolver and NAT64 to plug the gap.</p>
+<p>As a Talos patch this looked like:</p>
+<pre data-lang="yaml" style="background-color:#f9f9f9;color:#111111;" class="language-yaml "><code class="language-yaml" data-lang="yaml"><span style="color:#c82728;">machine</span><span>:
+</span><span>  </span><span style="color:#c82728;">sysctls</span><span>:
+</span><span>    </span><span style="color:#c82728;">net.ipv6.conf.all.forwarding</span><span>: </span><span style="color:#f07219;">1
+</span><span>  </span><span style="color:#c82728;">network</span><span>:
+</span><span>    </span><span style="color:#c82728;">nameservers</span><span>:
+</span><span>      </span><span style="color:#8e908c;"># https://nat64.net/
+</span><span>      - </span><span style="color:#839c00;">2a01:4f9:c010:3f02::1
+</span><span>      - </span><span style="color:#839c00;">2a01:4f8:c2c:123f::1
+</span><span>      - </span><span style="color:#839c00;">2a00:1098:2c::1
+</span></code></pre>
+<p>After which got the Talos control plane to a <code>Ready</code> state.</p>
+<p>Next problem... the Pod and Service IPs were not assigning correctly
+and all of the connectivity tests were failing once another node was added.</p>
+<p>Turned out that I was in a bit of a pickle cause Hetzner assigns whole <code>/64</code>'s to each
+node with public IPv6 and they're a bit random and discontinuous across nodes.
+Kubenretes does not yet support adding new Pod CIDR ranges and assigning them to single nodes
+natively. Cilium does have <code>CiliumNode</code> which can specify a <code>.spec.podCIDRs</code> but at this point
+I've been a month deep &amp; was about to gave up on life with computers.</p>
+<p>So in the end I gave up on my dream of being IPv4-less and have dualstack on the nodes and the
+Kubernetes cluster itself are using private addresses.</p>
+<blockquote>
+<p>📝 <strong>Take away</strong>: Keep it simple for a first cluster! Come back for IPv6 later</p>
+</blockquote>
+<h1 id="second-lesson-why-do-i-need-a-load-balancer">Second lesson: Why do I need a load balancer?</h1>
+<p>I got whole dedicated load balancer for my 1 worker node...
+That's not very cost effective is it, but it was so easy to setup and get working.
+The control plane node is excluded from the pool due to its label
+<code>node.kubernetes.io/exclude-from-external-load-balancers</code>.
+So lets remove that overkill load balancer!</p>
+<p>Previously I had been using <a rel="noopener nofollow noreferrer" target="_blank" href="https://docs.k3s.io/networking/networking-services#service-load-balancer"><code>k3s</code>s' svclb</a>
+which uses the node's IP as its <code>LoadBalancer</code> IPs instead of needing extenral virtual IPs.
+Luckily for me Cilium has a similar concept with <a rel="noopener nofollow noreferrer" target="_blank" href="https://docs.cilium.io/en/stable/network/node-ipam/#node-ipam">Node IPAM</a>!</p>
+<p>Now at this point I was using Cilium's Gateway API implementation, which is... how do I put it.
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/cilium/cilium/pull/39038">Incomplete</a> and a <a rel="noopener nofollow noreferrer" target="_blank" href="https://gateway-api.sigs.k8s.io/implementations/v1.2/">leader</a> at the same time. So naturally I ran into issues in trying to use
+Node IPAM with Cilium's Gateway API.</p>
+<p>The goal is to have the <code>v1.Service</code> of <code>cilium-&lt;gateway-name&gt;</code> to have <code>spec.loadBalancerClass: io.cilium/node</code>.
+I ended needing to move to <code>v1.18.0-pre-release</code> (note <em>pre-release</em>) to use the new object
+<a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/cilium/cilium/blob/v1.18.0-pre.1/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumgatewayclassconfigs.yaml"><code>CiliumGatewayClassConfig</code></a> object to configure the <code>loadBalancerClass</code>.</p>
+<p>It would kinda work, but not for privileged ports (&lt;1024), and if you set the
+<code>gatewayAPI.hostNetwork.enabled true</code> then it stops working. The latter becoming a culprit
+after finding this <a rel="noopener nofollow noreferrer" target="_blank" href="https://github.com/cilium/cilium/issues/38227#issuecomment-2734913950">issue comment</a>.</p>
+<p>After that I gave up on Cilium's Gateway API and looked for another implementation that
+supports setting the <code>spec.loadBalancerClass</code> which to my surprise is two! 🤯</p>
+<ul>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://gateway.envoyproxy.io/docs/api/extension_types/#envoyproxy">envoy-gateway</a></li>
+<li><a rel="noopener nofollow noreferrer" target="_blank" href="https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment">Istio</a></li>
+</ul>
+<p>So I went with Istio in Ambient mode to complicate my setup more which removed the need
+for a dedicated load balancer. Now I'm relying on DNS client behavior to balance between
+my 1 node.</p>
+<blockquote>
+<p>📝<strong>Take away</strong>: Gateway API is really new, a lot of knobs are not available yet.</p>
+</blockquote>
+<h1 id="conculsion">Conculsion</h1>
+<p>I've learnt a lot from this cloudlab already:</p>
+<ul>
+<li>IPv6 takes more thought than expected and Hetzner's implementation requires some extra concepts</li>
+<li>Gateway API might be GA but the implementations don't feel like it</li>
+</ul>
+
+					</div>
+				</article>
+
+				<hr />
+				
+				
+			</div>
+		</div>
+	</div>
+</main>
+
+
+	
+	<footer class='footer py-2'>
+		<div class='has-text-centered'>
+			<p class="mb-1">
+				Built with 💻 code and 💖 love
+            </p>
+			<p class="mt-1">
+				Powered By 🐾 Zola
+			</p>
+		</div>
+	</footer>
+	
+
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js'></script>
+	<script src='https://blog.rnett.nz/search_index.en.js'></script>
+	<script src='https://blog.rnett.nz/js/site.js'></script>
+	
+	
+</body>
+
+</html>

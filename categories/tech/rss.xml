@@ -1,0 +1,501 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - tech</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/categories/tech/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 11 May 2025 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Cloudlab Kubernetes setup</title>
+          <pubDate>Sun, 11 May 2025 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/kubernetes-setup/</link>
+          <guid>https://blog.rnett.nz/posts/kubernetes-setup/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/kubernetes-setup/">&lt;h1 id=&quot;intro&quot;&gt;Intro&lt;&#x2F;h1&gt;
+&lt;p&gt;This post is about some of the things that I&#x27;ve learnt while setting
+up a small scale Kubernetes cluster for my &quot;cloudlab&quot; to learn from.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;settings-the-stage&quot;&gt;Settings the stage&lt;&#x2F;h2&gt;
+&lt;p&gt;At &lt;code&gt;$day_job&lt;&#x2F;code&gt; I work with a few Kubernetes clusters and in particular at the
+lower layers of the stack. Messing around with that tech is often needing to
+rebuild clusters and mess them up good.&lt;&#x2F;p&gt;
+&lt;p&gt;I have had a mulit-node homelab Kubernetes setup that got way too complicated
+and died at the hands of an operator failure that I couldn&#x27;t be bothered to recover from
+(TL;DR longhorn + changing CNI == not a good time).&lt;&#x2F;p&gt;
+&lt;p&gt;So, I decided to branch out of the old laptops under desk to the &lt;strong&gt;&lt;em&gt;THE CLOUD&lt;&#x2F;em&gt;&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I set out with the goal of:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Learn more about IPv6 &amp;amp; use with Kubernetes&lt;&#x2F;li&gt;
+&lt;li&gt;Strictly use the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway-api.sigs.k8s.io&#x2F;&quot;&gt;Gateway API&lt;&#x2F;a&gt; and be able to use &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway-api.sigs.k8s.io&#x2F;mesh&#x2F;&quot;&gt;GAMMA&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;Spending as little as a I can&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;selecting-an-cloud-infra-provider&quot;&gt;Selecting an ☁️ Infra provider&lt;&#x2F;h2&gt;
+&lt;p&gt;Selecting a provider is like trying to find a sticky Telco that you
+know you&#x27;ll be paying for until your cloudlab-phase passed away.
+So to help start the selecting process I came up with some metrics of
+success:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;At least 2 vCPUs&lt;&#x2F;li&gt;
+&lt;li&gt;At least 2 GiB RAM&lt;&#x2F;li&gt;
+&lt;li&gt;At least 100+ GiB of traffic, just in case&lt;&#x2F;li&gt;
+&lt;li&gt;Have a reasonable latency (&lt;em&gt;#JustAPACThings&lt;&#x2F;em&gt; ;-;)&lt;&#x2F;li&gt;
+&lt;li&gt;Cost to be less than AUD$10-per-node a month&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;After going through the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kubernetes&#x2F;autoscaler&#x2F;tree&#x2F;master&#x2F;cluster-autoscaler&#x2F;cloudprovider&quot;&gt;cluster-autoscaler&lt;&#x2F;a&gt; provider list I eventually
+landed on &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;hetzner.cloud&#x2F;?ref=FHajdRC5nJ8C&quot;&gt;Hetzner (my referral link)&lt;&#x2F;a&gt; as it is by &lt;em&gt;far&lt;&#x2F;em&gt; the cheapest provider, even with the currency conversion.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;infra-setup&quot;&gt;Infra setup&lt;&#x2F;h3&gt;
+&lt;p&gt;The original &quot;just get it working&quot; setup was:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;1 control plane node&lt;&#x2F;li&gt;
+&lt;li&gt;1 worker node&lt;&#x2F;li&gt;
+&lt;li&gt;1 Loadbalancer&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Using:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.talos.dev&#x2F;&quot;&gt;Talos&lt;&#x2F;a&gt; for Kubernetes distribution&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;cilium.io&#x2F;&quot;&gt;Cilium&lt;&#x2F;a&gt; for CNI, IPAM, and Ingress&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;hetznercloud&#x2F;hcloud-cloud-controller-manager&quot;&gt;hetznercloud&#x2F;hcloud-cloud-controller-manager&lt;&#x2F;a&gt; for load balancer&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;hetznercloud&#x2F;csi-driver&quot;&gt;hetznercloud&#x2F;csi-driver&lt;&#x2F;a&gt; for dynamic volumes&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;kubernetes-sigs&#x2F;external-dns&#x2F;&quot;&gt;external-dns&lt;&#x2F;a&gt; to plumb load balancers to DNS&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h1 id=&quot;first-lesson-do-i-need-ipv4&quot;&gt;First lesson: Do I need IPv4?&lt;&#x2F;h1&gt;
+&lt;p&gt;I could save many cents a month if I did not use IPv4 addresses on Hetzner, so of course I tried
+to not use them. They give free IPv6 addresses for the nodes so I can still get some sweet
+internet!&lt;&#x2F;p&gt;
+&lt;p&gt;I hit a few snags along the way... like most of the internet is still only using IPv4 🧓.
+Which I did find some cool services to help get around that, namely &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;nat64.net&#x2F;&quot;&gt;nat64.net&lt;&#x2F;a&gt;
+which provides a DNS resolver and NAT64 to plug the gap.&lt;&#x2F;p&gt;
+&lt;p&gt;As a Talos patch this looked like:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yaml&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-yaml &quot;&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;machine&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;sysctls&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;net.ipv6.conf.all.forwarding&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;1
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;network&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;nameservers&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8e908c;&quot;&gt;# https:&#x2F;&#x2F;nat64.net&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;2a01:4f9:c010:3f02::1
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;2a01:4f8:c2c:123f::1
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;2a00:1098:2c::1
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;After which got the Talos control plane to a &lt;code&gt;Ready&lt;&#x2F;code&gt; state.&lt;&#x2F;p&gt;
+&lt;p&gt;Next problem... the Pod and Service IPs were not assigning correctly
+and all of the connectivity tests were failing once another node was added.&lt;&#x2F;p&gt;
+&lt;p&gt;Turned out that I was in a bit of a pickle cause Hetzner assigns whole &lt;code&gt;&#x2F;64&lt;&#x2F;code&gt;&#x27;s to each
+node with public IPv6 and they&#x27;re a bit random and discontinuous across nodes.
+Kubenretes does not yet support adding new Pod CIDR ranges and assigning them to single nodes
+natively. Cilium does have &lt;code&gt;CiliumNode&lt;&#x2F;code&gt; which can specify a &lt;code&gt;.spec.podCIDRs&lt;&#x2F;code&gt; but at this point
+I&#x27;ve been a month deep &amp;amp; was about to gave up on life with computers.&lt;&#x2F;p&gt;
+&lt;p&gt;So in the end I gave up on my dream of being IPv4-less and have dualstack on the nodes and the
+Kubernetes cluster itself are using private addresses.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;📝 &lt;strong&gt;Take away&lt;&#x2F;strong&gt;: Keep it simple for a first cluster! Come back for IPv6 later&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h1 id=&quot;second-lesson-why-do-i-need-a-load-balancer&quot;&gt;Second lesson: Why do I need a load balancer?&lt;&#x2F;h1&gt;
+&lt;p&gt;I got whole dedicated load balancer for my 1 worker node...
+That&#x27;s not very cost effective is it, but it was so easy to setup and get working.
+The control plane node is excluded from the pool due to its label
+&lt;code&gt;node.kubernetes.io&#x2F;exclude-from-external-load-balancers&lt;&#x2F;code&gt;.
+So lets remove that overkill load balancer!&lt;&#x2F;p&gt;
+&lt;p&gt;Previously I had been using &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.k3s.io&#x2F;networking&#x2F;networking-services#service-load-balancer&quot;&gt;&lt;code&gt;k3s&lt;&#x2F;code&gt;s&#x27; svclb&lt;&#x2F;a&gt;
+which uses the node&#x27;s IP as its &lt;code&gt;LoadBalancer&lt;&#x2F;code&gt; IPs instead of needing extenral virtual IPs.
+Luckily for me Cilium has a similar concept with &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.cilium.io&#x2F;en&#x2F;stable&#x2F;network&#x2F;node-ipam&#x2F;#node-ipam&quot;&gt;Node IPAM&lt;&#x2F;a&gt;!&lt;&#x2F;p&gt;
+&lt;p&gt;Now at this point I was using Cilium&#x27;s Gateway API implementation, which is... how do I put it.
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;cilium&#x2F;cilium&#x2F;pull&#x2F;39038&quot;&gt;Incomplete&lt;&#x2F;a&gt; and a &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway-api.sigs.k8s.io&#x2F;implementations&#x2F;v1.2&#x2F;&quot;&gt;leader&lt;&#x2F;a&gt; at the same time. So naturally I ran into issues in trying to use
+Node IPAM with Cilium&#x27;s Gateway API.&lt;&#x2F;p&gt;
+&lt;p&gt;The goal is to have the &lt;code&gt;v1.Service&lt;&#x2F;code&gt; of &lt;code&gt;cilium-&amp;lt;gateway-name&amp;gt;&lt;&#x2F;code&gt; to have &lt;code&gt;spec.loadBalancerClass: io.cilium&#x2F;node&lt;&#x2F;code&gt;.
+I ended needing to move to &lt;code&gt;v1.18.0-pre-release&lt;&#x2F;code&gt; (note &lt;em&gt;pre-release&lt;&#x2F;em&gt;) to use the new object
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;cilium&#x2F;cilium&#x2F;blob&#x2F;v1.18.0-pre.1&#x2F;pkg&#x2F;k8s&#x2F;apis&#x2F;cilium.io&#x2F;client&#x2F;crds&#x2F;v2alpha1&#x2F;ciliumgatewayclassconfigs.yaml&quot;&gt;&lt;code&gt;CiliumGatewayClassConfig&lt;&#x2F;code&gt;&lt;&#x2F;a&gt; object to configure the &lt;code&gt;loadBalancerClass&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;It would kinda work, but not for privileged ports (&amp;lt;1024), and if you set the
+&lt;code&gt;gatewayAPI.hostNetwork.enabled true&lt;&#x2F;code&gt; then it stops working. The latter becoming a culprit
+after finding this &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;cilium&#x2F;cilium&#x2F;issues&#x2F;38227#issuecomment-2734913950&quot;&gt;issue comment&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;After that I gave up on Cilium&#x27;s Gateway API and looked for another implementation that
+supports setting the &lt;code&gt;spec.loadBalancerClass&lt;&#x2F;code&gt; which to my surprise is two! 🤯&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gateway.envoyproxy.io&#x2F;docs&#x2F;api&#x2F;extension_types&#x2F;#envoyproxy&quot;&gt;envoy-gateway&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;istio.io&#x2F;latest&#x2F;docs&#x2F;tasks&#x2F;traffic-management&#x2F;ingress&#x2F;gateway-api&#x2F;#automated-deployment&quot;&gt;Istio&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;So I went with Istio in Ambient mode to complicate my setup more which removed the need
+for a dedicated load balancer. Now I&#x27;m relying on DNS client behavior to balance between
+my 1 node.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;📝&lt;strong&gt;Take away&lt;&#x2F;strong&gt;: Gateway API is really new, a lot of knobs are not available yet.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h1 id=&quot;conculsion&quot;&gt;Conculsion&lt;&#x2F;h1&gt;
+&lt;p&gt;I&#x27;ve learnt a lot from this cloudlab already:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;IPv6 takes more thought than expected and Hetzner&#x27;s implementation requires some extra concepts&lt;&#x2F;li&gt;
+&lt;li&gt;Gateway API might be GA but the implementations don&#x27;t feel like it&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</description>
+      </item>
+      <item>
+          <title>Slack custom emoji shinighans</title>
+          <pubDate>Mon, 28 Feb 2022 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/slack-custom-emoji/</link>
+          <guid>https://blog.rnett.nz/posts/slack-custom-emoji/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/slack-custom-emoji/">&lt;p&gt;This will be a quick one, I swear.&lt;&#x2F;p&gt;
+&lt;p&gt;I&#x27;ll start with the morale of the story:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Some things are unexpected exhilf paths when they are working as designed.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;This story is about a widely used and the &quot;IRC-of-web2.js&quot;: Slack and its loved custom emojis.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;custom-emojis-how-do-they-work&quot;&gt;Custom emojis, how do they work&lt;&#x2F;h2&gt;
+&lt;p&gt;Let&#x27;s all get one the same page here:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Slack lets you to just upload little &lt;code&gt;png&lt;&#x2F;code&gt;&#x27;s&lt;&#x2F;li&gt;
+&lt;li&gt;These are great for building a sense of community on a slack space&lt;&#x2F;li&gt;
+&lt;li&gt;A lot of memes get uploaded&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;To dig deeper you need to use a tool that is considered illegal in some jurisdictions,
+so use at your own risk: Inspect Element.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;&#x2F;images&#x2F;slack_custom_emoji&#x2F;inspect-element.png&quot; alt=&quot;A screenshot of Firefox development console with an image tag highlighed and a hover image of Picard faceplaming&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;slack-emojis-are-public-and-unauthenticated&quot;&gt;Slack emojis are &lt;em&gt;PUBLIC&lt;&#x2F;em&gt; and &lt;em&gt;UNAUTHENTICATED&lt;&#x2F;em&gt;&lt;&#x2F;h2&gt;
+&lt;p&gt;I&#x27;ll be using a open invite Slack instance for these examples: &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;lastweekinaws.slack.com&#x2F;&quot;&gt;lastweekinaws.slack.com&lt;&#x2F;a&gt;
+hosted by the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.duckbillgroup.com&#x2F;&quot;&gt;Duck Bill group&lt;&#x2F;a&gt;. That Slack&#x27;s team id is: &lt;code&gt;T02N6U1DVD4&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Not a paid advertiment, just here to spread good shit posters &lt;em&gt;cough&lt;&#x2F;em&gt; &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;quinnypig&quot;&gt;@quinnypig&lt;&#x2F;a&gt; &lt;em&gt;cough&lt;&#x2F;em&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;So, as you may know that the URLs for custom emojis are public and anyone can look at them if they have the URL.
+The format of these urls look like this:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;code&gt;https:&#x2F;&#x2F;emoji.slack-edge.com&#x2F;T02N6U1DVD4&#x2F;squirrel&#x2F;465f40c0e0.png&lt;&#x2F;code&gt; aka&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;https:&#x2F;&#x2F;emoji.slack-edge.com&#x2F;T02N6U1DVD4&#x2F;squirrel&#x2F;465f40c0e0.png&quot; alt=&quot;A picture of a squirrel wearing a fedora and a suit&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;After some playing around, these urls can be expressed as &lt;code&gt;${team_id}&#x2F;${emoji_name}&#x2F;${cache_buster_hash}.png&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;base url is always &lt;code&gt;https:&#x2F;&#x2F;emoji.slack-edge.com&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;${team_id}&lt;&#x2F;code&gt; the identifier for the slack intance&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;${emoji_name}&lt;&#x2F;code&gt; is easy and quite guessable cause so many people like to recreate their last work slack in their new place, like &lt;code&gt;:falcepalm:&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;${cache_buster_hash}&lt;&#x2F;code&gt; is a random 10 character hex string so it can bust some caches&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;side note: &lt;code&gt;:squirrel:&lt;&#x2F;code&gt;  is a custom emoji on all instances &amp;amp; can be used to confirm an &lt;code&gt;team_id&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;The &lt;code&gt;${cache_buster_hash}&lt;&#x2F;code&gt; part seems to be a bit finiky. For &lt;code&gt;:squirrel:&lt;&#x2F;code&gt; it can be &lt;strong&gt;any&lt;&#x2F;strong&gt; value.
+So &lt;code&gt;0000000000&lt;&#x2F;code&gt; is perfectly valid and is great to verify a &lt;code&gt;${team_id}&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;ok-but-so-what&quot;&gt;Ok, but so what?&lt;&#x2F;h2&gt;
+&lt;p&gt;Well, it is handy to know and if you ever want to spook your security team
+just let them know that employee PII (photos) in the form of emojis are publicly
+accessible with three easy steps:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;Post the emoji in question&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;Right click &amp;gt; Copy Image Link&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;Open that link in a private window &#x2F; incognito window&lt;&#x2F;li&gt;
+&lt;li&gt;🤯🧑‍💻 &lt;!-- I hope that ZWJ works everywhere --&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;Though, you do need to have 3 pieces of information to get to it without it getting help from the inside.&lt;&#x2F;p&gt;
+&lt;p&gt;I did take this to the Slack enterprise people once in a past job.
+The response was: &quot;Working as designed&quot;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-can-i-do-really-do-with-this&quot;&gt;What can I do really do with this?&lt;&#x2F;h2&gt;
+&lt;p&gt;Well, not that much... you need to know the &lt;code&gt;${team_id}&lt;&#x2F;code&gt; of the slack instance you are interested in and sometimes the &lt;code&gt;${cache_buster_hash}&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;That is hard if you didn&#x27;t save it somewhere before you got kicked off for spamming &lt;code&gt;:flag-ua::muscle::flag-ua:&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;So far I have not found any unauthenticated way to get that &lt;code&gt;${team_id}&lt;&#x2F;code&gt; but the &lt;code&gt;:squirrel:&lt;&#x2F;code&gt; trick is great
+to confirm a slack instance.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conculsion-faq&quot;&gt;Conculsion &#x2F; FAQ&lt;&#x2F;h2&gt;
+&lt;p&gt;Is Slack emojis good for storing important information?&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;No, but this is not an invitation to start using GUID&#x27;s as emoji names nor to stop making wholesome memes of colleagues &lt;strong&gt;with their consent&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;So why are Slack emojis public?&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;lol, no idea. Probably cause of some &lt;del&gt;legacy&lt;&#x2F;del&gt; money generating systems&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;Should I save my companies Slack&#x27;s &lt;code&gt;${team_id}&lt;&#x2F;code&gt; before I leave so I can download all my emojis later??&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Nah. Just treat your favourte emojis like NFT&#x27;s, &lt;code&gt;right-click &amp;gt; Save Image As ...&lt;&#x2F;code&gt; them cause who knows when the server is going offline.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+</description>
+      </item>
+      <item>
+          <title>AWS SSO Deeeep Dive</title>
+          <pubDate>Sun, 11 Apr 2021 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/aws-sso-deep-dive/</link>
+          <guid>https://blog.rnett.nz/posts/aws-sso-deep-dive/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/aws-sso-deep-dive/">&lt;!--
+ What to cover:
+  - intro to AWS SSO
+  - What the cli experience is like
+  - What APIs are happening
+--&gt;
+&lt;h1 id=&quot;what-is-even-sso&quot;&gt;What is even SSO?!&lt;&#x2F;h1&gt;
+&lt;p&gt;SSO is the fancy TLA for &lt;strong&gt;S&lt;&#x2F;strong&gt;ingle &lt;strong&gt;S&lt;&#x2F;strong&gt;ign &lt;strong&gt;O&lt;&#x2F;strong&gt;n, which is the great of idea
+of having just having to login into one place &amp;amp; then authenticate into other
+services when you want to. Some kind people have put great effort into the
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Single_sign-on&quot;&gt;Wikipeia&lt;&#x2F;a&gt; page for it,
+recommended to get more familiar with the idea.&lt;&#x2F;p&gt;
+&lt;p&gt;Generally it is a very &lt;em&gt;Enterprise Plan&lt;&#x2F;em&gt; feature so us mere
+mortals that cannot pay the usual USD$50&#x2F;user&#x2F;month (minimum 50 users) don&#x27;t get to see it much.
+Of course with the exception of the &quot;Social&quot; logins (&quot;Sign in with Facebook&#x2F;Google&quot;)
+and AWS that provides it FOR FREE.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;&#x2F;strong&gt;: that none of these companies named sponsored this post&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h2 id=&quot;the-lab-setup&quot;&gt;The &quot;&lt;em&gt;Lab&lt;&#x2F;em&gt;&quot; Setup&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Developer account for &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;developer.okta.com&#x2F;&quot;&gt;Okta&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Free tier &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;aws.amazon.com&#x2F;&quot;&gt;AWS Account&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Use &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;cli&#x2F;latest&#x2F;userguide&#x2F;install-cliv2.html&quot;&gt;AWS CLI v2&lt;&#x2F;a&gt;, SSO support is only in V2+&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Setting up basic use of &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;singlesignon&#x2F;latest&#x2F;userguide&#x2F;okta-idp.html&quot;&gt;Okta as the &lt;strong&gt;Id&lt;&#x2F;strong&gt;entity &lt;strong&gt;P&lt;&#x2F;strong&gt;rovider (IdP)&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;I will not be going through how to setup this &quot;&lt;em&gt;lab&lt;&#x2F;em&gt;&quot;, AWS &amp;amp; Okta have some
+&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;singlesignon&#x2F;latest&#x2F;userguide&#x2F;okta-idp.html&quot;&gt;nice docs&lt;&#x2F;a&gt; on how to&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;To start, the native way of getting credentials for a session are the following:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#f9f9f9;color:#111111;&quot;&gt;&lt;code&gt;&lt;span&gt;aws sso login &amp;lt;profile_name&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And from there lets see what has done.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-has-that-done&quot;&gt;What has that done?&lt;&#x2F;h2&gt;
+&lt;p&gt;There is some new mess in your &lt;code&gt;~&#x2F;.aws&lt;&#x2F;code&gt; folder.&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#f9f9f9;color:#111111;&quot;&gt;&lt;code&gt;&lt;span&gt;&amp;gt; find ~&#x2F;.aws -exec file {} \;
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;config: ASCII text
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;cli: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;cli&#x2F;cache: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;cli&#x2F;cache&#x2F;0000000000000000000000000000000000000000.json: JSON data
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache: directory
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;botocore-client-id-ap-southeast-9.json: JSON data
+&lt;&#x2F;span&gt;&lt;span&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;1111111111111111111111111111111111111111.json: JSON data
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And in the &lt;code&gt;~&#x2F;.aws&#x2F;config&lt;&#x2F;code&gt; there is now a profile&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#f9f9f9;color:#111111;&quot;&gt;&lt;code&gt;&lt;span&gt;[profile RoleAccess-000000000000]
+&lt;&#x2F;span&gt;&lt;span&gt;sso_start_url = https:&#x2F;&#x2F;d-0000000000.awsapps.com&#x2F;start#&#x2F;
+&lt;&#x2F;span&gt;&lt;span&gt;sso_region = ap-southeast-9
+&lt;&#x2F;span&gt;&lt;span&gt;sso_account_id = 000000000000
+&lt;&#x2F;span&gt;&lt;span&gt;sso_role_name = RoleAccess
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;cache-files&quot;&gt;Cache files?!&lt;&#x2F;h3&gt;
+&lt;p&gt;Those cache files are new and interesting. So what are in those?&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;cli-cache&quot;&gt;CLI cache&lt;&#x2F;h4&gt;
+&lt;p&gt;&lt;code&gt;~&#x2F;.aws&#x2F;cli&#x2F;cache&#x2F;0000000000000000000000000000000000000000.json&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ProviderType&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;sso&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Credentials&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;AccessKeyId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ASIA0000000000000000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;SecretAccessKey&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot; -- classic secret access key high entropy stuff here --&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;SessionToken&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot; -- big old session token --&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Expiration&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2021-02-11T09:12:40Z&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Taking these credentials out they actually work.&lt;&#x2F;p&gt;
+&lt;p&gt;So this looks like how AWS CLI v2 handles your SSO sessions and just keeps them
+to the side for you.&lt;&#x2F;p&gt;
+&lt;p&gt;The file name looks to be a hash so guessing the name is pretty hard for a file
+inclusion attack unlike the ye &#x27;old &lt;code&gt;~&#x2F;.aws&#x2F;credentials&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;Though these look to be stable hashes per profile.&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;sso-file&quot;&gt;SSO File&lt;&#x2F;h4&gt;
+&lt;p&gt;&lt;code&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;1111111111111111111111111111111111111111.json&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;startUrl&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;https:&#x2F;&#x2F;d-0000000000.awsapps.com&#x2F;start#&#x2F;&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;region&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ap-southeast-9&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;accessToken&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eyJlbmMiOiJBMjU2R0NNIiwidGFnIjoiSm5udXRHU0tKTVVTb1RqRyIsImFsZyI6IkEyNTZHQ01LVyIsIml2IjoiazNiZXlaeEtDR0otc05VQyJ9.AYABeObaD6db3xtlf2VyQV4uZbcAHwABABBEYXRhUGxhbmVTZXNzaW9uAAlQZXJlZ3JpbmUAAQAHYXdzLWttcwBQYXJuOmF3czprbXM6YXAtc291dGhlYXN0LTI6NDEyMjAxMDI1ODU4OmtleS9kMTEwZTQ1ZC1mMGVhLTQ4NTYtYmFjNS0xMmMyYTMxM2Q2YWEAuAECAQB4Pcqs65qFZyXWdyHZA9hnHzXOhvyEOzDstw3xH4zNak0BY6qRWzxkq86qEu6rfKsXwQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDLXUMJLzS47DezlQSAIBEIA7lHcufjSiF9_gCd_IcRwk9NoCCnr9JmXvmWygjueAsEigiiXZ3WUF-K64_lSWTdaT9dC8rGDIh2-nEjoCAAAAAAwAABAAAAAAAAAAAAAAAAAAAFNQZGeo3pZnmaTvFFpgff____8AAAABAAAAAAAAAAAAAAABAAAAIAoOunYoPR2JIAc65uLD1QkKwC7dH1NzyRkba108s0-XEVJFBRIH1bPqAUpp7NaJyg.dzmoGCWoLlq-x4GZ.IHhQ2ffvTLAQQfffWXu9QvnEg1dir26R1HZ5gcNX1QcScFq15-AE_9ylR9djZyTv2qCk3xHRdx26oGhhK50m6DbryV2wy1OsEL_UpbAdt4x18upnSJsQXEcnug9mEbdP8P-XtXCzhCMT2yCahatqvsifKagyInM2vQATNZRc87r2pM4qy_z4h3rmzBpvXw6_lQ5AN7gZXN1urAGELHGanrHzkCX80msZskK1_RFIQbO0HADjfTnEeK1UmNXaXpFbq2oMI-NHIbkGsf8_XhY3AFX-EZfqS_MmgPAQAJ-fTF4P8vlJ4-UHQTX3onws_v3LWoqGA8Tlf-Vrf76mqUqN-ZUtnsUeP-0NVy2dDZu3z54xghta40Dbly9QVItaGzB9oSXJKn-NwiBdKxm6F0BhC9TShFghZ-k9P0JFCuHvl7lKlETTSH1tnQXlRvTlAwN7hagZWMqw91fZgg9v_Ujc6w.zj3d2TiDLW7ajD5NVf6P0A&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;expiresAt&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2021-02-11T16:12:30Z&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Hmm a string starting with &lt;code&gt;ey&lt;&#x2F;code&gt;?! Is this a JWT?!&lt;&#x2F;p&gt;
+&lt;p&gt;Header contains the following.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;enc&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;A256GCM&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;tag&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;JnnutGSKJMUSoTjG&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;alg&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;A256GCMKW&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;iv&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;k3beyZxKCGJ-sNUC&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;There is a few crypto stuff that has gone over my head, but from searching for
+the algorithm (under &lt;code&gt;alg&lt;&#x2F;code&gt; key) &lt;code&gt;A256GCMKW&lt;&#x2F;code&gt; found a &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;stackoverflow.com&#x2F;questions&#x2F;38122521&#x2F;what-is-the-algorithm-string-for-agcm256-kw-in-java-cryptography-to-be-used-i&quot;&gt;helpful StackOverflow
+thread&lt;&#x2F;a&gt;.
+The key points I got from it are&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;AES256&lt;&#x2F;code&gt; encryption algorithm used with the following options,&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;GCM&lt;&#x2F;code&gt; - to detonate it is in &lt;code&gt;GCM&lt;&#x2F;code&gt; mode&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;KW&lt;&#x2F;code&gt; - to detonate that key wrapping is used&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Does this help much? Not really.&lt;&#x2F;p&gt;
+&lt;p&gt;Now for the body (decoded by the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gchq.github.io&#x2F;CyberChef&#x2F;&quot;&gt;CyberChef themselves&lt;&#x2F;a&gt;)&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;text&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-text &quot;&gt;&lt;code class=&quot;language-text&quot; data-lang=&quot;text&quot;&gt;&lt;span&gt;...xæÚ.§[ß.e.erA^.e·......DataPlaneSession.	Peregrine....aws-kms.Parn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa.¸....x=Ê¬ë..g%Öw!Ù.Øg.5Î.ü.;0ì·
+&lt;&#x2F;span&gt;&lt;span&gt;ñ..ÍjM.cª.[&amp;lt;d«Îª.î«|«.Á...~0|.	*.H.÷
+&lt;&#x2F;span&gt;&lt;span&gt;... o0m...0h.	*.H.÷
+&lt;&#x2F;span&gt;&lt;span&gt;...0..	`.H.e....0...µÔ0.óK.Ã{9PH....;.w.~4¢.Ø.t..ÂOM  §¯Òf^ù.Ê.îx....¢].ÖPRºâT.MÖ.õÐ¼¬`È.iÄ.........................Ô..ê7¥.æi;Å....À...@...........@.....®...GbH.Î¹¸°õBB°.·GÔÜòFFÚ×O,Ñq.$PQ }[&amp;gt; .¦.Íh. w9¨.%¨.Z±àfH..6}ûÓ,..}÷Ö^ïP¾q ÕØ«Û¤u..`pÕõAÄ...y.Or..]...¿j..|GEÜvê.¡.®t. Û¯%vÃ-N°BÔ¥°.·.uòêgH..\G&amp;#39;º.f.·Oðõí\,á.ÄöÈ&amp;amp;¡jÚ¯²&amp;#39;Êj...Í¯@.Íe.&amp;lt;î½©3.²Ï.w®lÁ¦õðêT9.Þàesuº°..±ÆjzÇÎ@.óI¬fÉ
+&lt;&#x2F;span&gt;&lt;span&gt;Õ.HA³´..ã}9Äx.T.ÕÚ^.[«j. ÑÈnA¬.Åácp.\F_©#&amp;amp;.ð...Ó..ü¾RxPt._z&amp;#39;ÂË÷-j*....õk.¾¦©J.eKg±G.ÐÕrÙÐÙ»|ùã.!µ®4
+&lt;&#x2F;span&gt;&lt;span&gt;¹rõ.Hµ¡³.Ú.\.§7..t¬fè]..&#x2F;SJ.`..=?BE
+&lt;&#x2F;span&gt;&lt;span&gt;áï.¹J.DÓH}m..åFôå..{.¨.XÊ°÷WÙ..oR7:Ä
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Um... wat?! This looks very cyber encrypted but also is that a ARN in there?
+And what is this &lt;code&gt;DataPlaneSession&lt;&#x2F;code&gt;?!&lt;&#x2F;p&gt;
+&lt;p&gt;That KMS key id &lt;code&gt;arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;&#x2F;code&gt; is a bit strange.
+The account id is not one of &lt;em&gt;mine&lt;&#x2F;em&gt;, so it must be an AWS managed account. So
+lets try some basic KMS operations on the key to see if there is a permissive
+key policy.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; aws &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;kms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; describe-key&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --region&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; ap-southeast-2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --key-id&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;An&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; error occurred (AccessDeniedException&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; calling the DescribeKey operation:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; aws &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;kms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; encrypt&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --region&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; ap-southeast-2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --key-id&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --plaintext &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;$(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt;echo lol &lt;&#x2F;span&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;| &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;base64&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; -&lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;)&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;An&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; error occurred (AccessDeniedException&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; calling the Encrypt operation:
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#3e999f;&quot;&gt;&amp;gt;&lt;&#x2F;span&gt;&lt;span&gt; aws &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;kms&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; decrypt&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --region&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; ap-southeast-2&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --key-id&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; arn:aws:kms:ap-southeast-2:412201025858:key&#x2F;d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt; --ciphertext-blob &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;$(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;base64&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; jwt_body&lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;)&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;An&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; error occurred (InvalidCiphertextException&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#c82728;&quot;&gt;when&lt;&#x2F;span&gt;&lt;span style=&quot;color:#4271ae;&quot;&gt; calling the Decrypt operation:
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Ok, so that is mostly a no from what I know about KMS keys. Though that &lt;code&gt;InvalidCiphertextException&lt;&#x2F;code&gt; might be an &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Oracle_attack&quot;&gt;oracle vector&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I do wonder if it is the same KMS key for everyone that has deployed their SSO
+into that region or if it is per customer.&lt;&#x2F;p&gt;
+&lt;p&gt;The former might allow a path for token reuse between SSO instances, while the
+latter would mean a $1&#x2F;month&#x2F;per customer instance fee for the SSO team that they
+are kindly not passing onto the customer (please thank your local SSO team
+member today).&lt;&#x2F;p&gt;
+&lt;p&gt;If I ever get around to make more SSO instances I&#x27;ll update this post with
+those findings.&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;signature-section&quot;&gt;Signature section&lt;&#x2F;h4&gt;
+&lt;p&gt;There isn&#x27;t really anything we can get from this section as the algorithm is
+symmetric (AES) so we are not gonna get anything from it.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;access-token&quot;&gt;Access Token&lt;&#x2F;h3&gt;
+&lt;p&gt;Jumping back a bit, but that &lt;code&gt;accessToken&lt;&#x2F;code&gt; in &lt;code&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;1111111111111111111111111111111111111111.json&lt;&#x2F;code&gt; file is really interesting.
+It is used with the AWS SSO API to vend out access keys into accounts.&lt;&#x2F;p&gt;
+&lt;p&gt;It is essentially a replacement for your login credentials to your IdP, MFA and
+all but with a time boxed existence.
+From this token you can iterate all your accounts you have access to, the
+roles in each of those accounts and then generate access keys for them.&lt;&#x2F;p&gt;
+&lt;p&gt;The flow goes:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccounts&lt;&#x2F;code&gt; - takes the access token. Returns a list of accounts that
+the token can access&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccountRoles&lt;&#x2F;code&gt; - takes the access token, and account id. Returns a
+list of roles the token can use in said account&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;sso:GetRoleCredentials&lt;&#x2F;code&gt; - takes the access token, account id and role name.
+Returns working access keys for the role in said account.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;For details about these actions have a look at the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;boto3.amazonaws.com&#x2F;v1&#x2F;documentation&#x2F;api&#x2F;latest&#x2F;reference&#x2F;services&#x2F;sso.html&quot;&gt;Boto3 docs for SSO service&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;These actions are recorded in CloudTrail. To be honest I am surprised as these
+are at all since they are using Access Tokens instead of &lt;code&gt;STS&lt;&#x2F;code&gt; access keys.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is an example event:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;json&quot; style=&quot;background-color:#f9f9f9;color:#111111;&quot; class=&quot;language-json &quot;&gt;&lt;code class=&quot;language-json&quot; data-lang=&quot;json&quot;&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventVersion&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;1.08&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;userIdentity&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;type&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Unknown&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;principalId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;aaaaaaaaaa-bbbbbbbb-cccc-dddd-eeee-ffffffffffff&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;accountId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;000000000000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;userName&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;user@example.com&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    },
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventTime&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;2021-03-28T00:26:05Z&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventSource&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;sso.amazonaws.com&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventName&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ListAccountRoles&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;awsRegion&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;ap-southeast-2&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;sourceIPAddress&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;8.8.8.8&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;userAgent&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Boto3&#x2F;1.17.5 Python&#x2F;3.9.2 Linux&#x2F;5 Botocore&#x2F;1.20.5&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;requestParameters&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;null&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;responseElements&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;null&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;requestID&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;7e0ffa90-e6cc-497a-982e-42ef7db5b415&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventID&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;b02878f9-a936-4027-9338-16fdba509113&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;readOnly&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventType&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;AwsServiceEvent&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;managementEvent&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#f07219;&quot;&gt;true&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;eventCategory&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;Management&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;recipientAccountId&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;000000000000&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;,
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;serviceEventDetails&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: {
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;account_id&amp;quot;&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#839c00;&quot;&gt;&amp;quot;000000000000&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h1 id=&quot;self-plug&quot;&gt;Self-plug&lt;&#x2F;h1&gt;
+&lt;p&gt;From working with SSO I hobbled together a couple of scripts to automate the
+setup of some of the annoying parts of AWS SSO, namely &lt;code&gt;aws sso login&lt;&#x2F;code&gt;
+ssuucckks.&lt;&#x2F;p&gt;
+&lt;p&gt;You get shoved to a browser every time when you got perfectly good cached
+credentials on disk! So these scripts &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;drbarnz&#x2F;aws-sso-tools&quot;&gt;drbarnz&#x2F;aws-sso-tools&lt;&#x2F;a&gt;
+handle most of the time when you have to use that command.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Initial login&lt;&#x2F;li&gt;
+&lt;li&gt;Switching profiles (account&#x2F;role)&lt;&#x2F;li&gt;
+&lt;li&gt;Generating profiles in &lt;code&gt;~&#x2F;.aws&#x2F;config&lt;&#x2F;code&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h1 id=&quot;take-aways&quot;&gt;Take Aways&lt;&#x2F;h1&gt;
+&lt;ul&gt;
+&lt;li&gt;SSO is cool if you want short lived credentials locally available&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;~&#x2F;.aws&#x2F;credentials&lt;&#x2F;code&gt; are out &lt;code&gt;~&#x2F;.aws&#x2F;cli&#x2F;${HASH}.json&lt;&#x2F;code&gt; are in for access
+keys&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;~&#x2F;.aws&#x2F;sso&#x2F;cache&#x2F;${HAS}.json&lt;&#x2F;code&gt;&#x27;s &lt;code&gt;accessToken&lt;&#x2F;code&gt; is same as login credentials
+but time boxed&lt;&#x2F;li&gt;
+&lt;li&gt;SSO sessions do not make a mess of environment variables&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;extra-reading&quot;&gt;Extra Reading&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;docs.aws.amazon.com&#x2F;singlesignon&#x2F;latest&#x2F;userguide&#x2F;understanding-key-concepts.html&quot;&gt;AWS SSO&#x27;s docs on SSO&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;boto3.amazonaws.com&#x2F;v1&#x2F;documentation&#x2F;api&#x2F;latest&#x2F;reference&#x2F;services&#x2F;sso.html&quot;&gt;Boto3 docs for SSO service&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;drbarnz&#x2F;aws-sso-tools&quot;&gt;AWS SSO tooling&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</description>
+      </item>
+      <item>
+          <title>Lazy Postgres</title>
+          <pubDate>Mon, 23 Apr 2018 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/lazy-postgres/</link>
+          <guid>https://blog.rnett.nz/posts/lazy-postgres/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/lazy-postgres/">&lt;h2 id=&quot;background&quot;&gt;Background&lt;&#x2F;h2&gt;
+&lt;p&gt;Sometimes I want to have local services for some development work outside of a
+container but I don&#x27;t want to run them if I&#x27;m not using them.&lt;&#x2F;p&gt;
+&lt;p&gt;After using &lt;code&gt;systemd&lt;&#x2F;code&gt; for a while I got curious about the &lt;code&gt;.socket&lt;&#x2F;code&gt; services. I
+knew that they could lazily start services when they are needed but not really
+sure what supported them.&lt;&#x2F;p&gt;
+&lt;p&gt;So reading the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.freedesktop.org&#x2F;software&#x2F;systemd&#x2F;man&#x2F;systemd.socket.html&quot;&gt;documentation&lt;&#x2F;a&gt; is a bit like drawing the &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.reddit.com&#x2F;r&#x2F;restofthefuckingowl&#x2F;&quot;&gt;rest of the owl&lt;&#x2F;a&gt;. It kinda tells you exactly what it is but not much in a way of what it lets you do.&lt;&#x2F;p&gt;
+&lt;p&gt;I still don&#x27;t get exactly what is going on but my mental model for it all is:&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;the &lt;code&gt;*.socket&lt;&#x2F;code&gt; system service will occupy the socket file or network port
+you want to listen to&lt;&#x2F;li&gt;
+&lt;li&gt;upon some initial connection &lt;code&gt;systemd&lt;&#x2F;code&gt; will start the prescribed service&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;???&lt;&#x2F;em&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;profit&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;p&gt;The documentation does elude to a initial connection hand over to the service
+that has started for that &lt;em&gt;✨smooth transition✨&lt;&#x2F;em&gt; but I have never been able to get to
+work.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;The recipe to success:&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;install&quot;&gt;Install&lt;&#x2F;h2&gt;
+&lt;p&gt;The pre-requisites are having &lt;code&gt;postgresql&lt;&#x2F;code&gt; and &lt;code&gt;systemd&lt;&#x2F;code&gt; installed.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;create &lt;code&gt;postgresql.socket&lt;&#x2F;code&gt; into &lt;code&gt;&#x2F;usr&#x2F;lib&#x2F;systemd&#x2F;system&lt;&#x2F;code&gt; with the content
+below&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre style=&quot;background-color:#f9f9f9;color:#111111;&quot;&gt;&lt;code&gt;&lt;span&gt;[Socket]
+&lt;&#x2F;span&gt;&lt;span&gt;ListenStream=&#x2F;run&#x2F;postgresql&#x2F;.s.PGSQL.5432
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;[Install]
+&lt;&#x2F;span&gt;&lt;span&gt;WantedBy=sockets.target
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl enable postgresql.socket&lt;&#x2F;code&gt; to enable the socket service&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;em&gt;Optional&lt;&#x2F;em&gt; run &lt;code&gt;sudo systemctl start postgresql.socket&lt;&#x2F;code&gt; to start listening
+now &amp;amp; try it out yourself&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;uninstall&quot;&gt;Uninstall&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl disable postgresql.socket&lt;&#x2F;code&gt; to disable the socket service&lt;&#x2F;li&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl stop postgresql.socket&lt;&#x2F;code&gt; to stop the listening socket&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;cavets&quot;&gt;Cavets&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;slow 1st time usage, may even fail 1st connection attempt&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;ListenStream&lt;&#x2F;code&gt; needs to point to where postgres would be, e.g. port &lt;code&gt;5432&lt;&#x2F;code&gt; or a socket file.&lt;&#x2F;li&gt;
+&lt;li&gt;This has only been tested on Arch Linux&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This post is largely based on an old &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;gist.github.com&#x2F;dbanetto&#x2F;eb7b941740af6e993f1cb1ddeb95beca&quot;&gt;gist&lt;&#x2F;a&gt; I did a few years back, so take this as a &lt;a rel=&quot;noopener nofollow noreferrer&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=szUJSXBjpJM&quot;&gt;dramatic reenactment&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+</description>
+      </item>
+    </channel>
+</rss>

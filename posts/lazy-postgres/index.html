@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+	<meta name='theme-color' content='#ffffff'>
+	<meta name='msapplication-TileColor' content='#da532c'>
+	<link rel='manifest' href='&#x2F;icons&#x2F;site.webmanifest'>
+	<link rel='mask-icon' href='&#x2F;icons&#x2F;safari-pinned-tab.svg' color='#5bbad5' />
+	<link rel='icon' type='image/png' sizes='16x16' href='&#x2F;icons&#x2F;favicon-16x16.png' />
+	<link rel='icon' type='image/png' sizes='32x32' href='&#x2F;icons&#x2F;favicon-32x32.png' />
+	<link rel='apple-touch-icon' sizes='180x180' href='&#x2F;icons&#x2F;apple-touch-icon.png' />
+
+	<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css' />
+	<link rel="stylesheet"
+		href="https://cdnjs.cloudflare.com/ajax/libs/galleria/1.6.1/themes/twelve/galleria.twelve.min.css" />
+    
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.rnett.nz/rss.xml">
+    
+
+	<link rel='stylesheet' href='https://blog.rnett.nz/site.css' />
+
+	
+	
+
+	<title>Title can be filled in later | Lazy Postgres</title>
+</head>
+
+<body class='site'>
+	
+	<nav class='navbar is-light' role='navigation' aria-label='main navigation'>
+		<div class='container'>
+			<div class='navbar-brand'>
+				<a class='navbar-item has-text-weight-bold' href='/'>Title can be filled in later</a>
+				<a role='button' class='navbar-burger burger' aria-label='menu' aria-expanded='false'
+					data-target='navMenu'>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+				</a>
+			</div>
+
+			<div id='navMenu' class='navbar-menu'>
+				<div class='navbar-end'>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;' class='navbar-item'>
+						Home
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;posts' class='navbar-item'>
+						Posts
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;tags' class='navbar-item'>
+						Tags
+					</a>
+					
+					<a href='https:&#x2F;&#x2F;blog.rnett.nz&#x2F;categories' class='navbar-item'>
+						Categories
+					</a>
+					
+					<div class='navbar-item'>
+						<div class='field has-addons'>
+							<div class='control'>
+								<input id='nav-search' class='input is-small' type='search' placeholder='Search'
+									data-target="#search-modal">
+							</div>
+							<div class='control'>
+								<a class='button is-small'>🔎</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+	
+
+	<div id="search-modal" class="modal">
+		<div class="modal-background"></div>
+		<div class="modal-content">
+			<div class='field'>
+				<p class='control has-icons-right'>
+					<input id='search' class='input' type='search' placeholder='Search this website.'>
+					<span class='icon is-small is-right'>🔎</span>
+				</p>
+			</div>
+			<div class='search-results'>
+				<div class='search-results__items'>
+				</div>
+			</div>
+		</div>
+		<button class="modal-close is-large" aria-label="close"></button>
+	</div>
+
+	
+	
+
+	
+<main class='section'>
+	<div class='container'>
+		<div class='columns'>
+			<div class='column is-10 is-offset-1'>
+				<article>
+					<h1 class='title'>Lazy Postgres</h1>
+					<h2 class='subtitle'>Starting postgresql when you want it with the magic of systemd sockets</h2>
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+<p class='has-text-grey'>
+	David published on <time datetime='2018-04-23'>April 23, 2018</time>
+</p>
+
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+<p class='has-text-grey'>
+	🕰️ 2 min, 319 words
+</p>
+
+						</div>
+					</div>
+
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Categories:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/categories/tech/'>
+		tech
+	</a>
+	
+</p>
+
+							
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+							
+<p>
+	<span class="has-text-black has-text-weight-normal">Tags:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/systemd/'>
+		systemd
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/postgres/'>
+		postgres
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/linux/'>
+		linux
+	</a>
+	
+</p>
+
+							
+						</div>
+					</div>
+
+					
+					<hr />
+					<div class='content'>
+						<p class='has-text-weight-bold'>Table of Contents</p>
+						<ul>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/lazy-postgres/#background'>Background</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/lazy-postgres/#install'>Install</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/lazy-postgres/#uninstall'>Uninstall</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/lazy-postgres/#cavets'>Cavets</a>
+								
+							</li>
+							
+						</ul>
+					</div>
+					
+
+					
+					<hr />
+
+					<div class='content has-text-justified'>
+						<h2 id="background">Background</h2>
+<p>Sometimes I want to have local services for some development work outside of a
+container but I don't want to run them if I'm not using them.</p>
+<p>After using <code>systemd</code> for a while I got curious about the <code>.socket</code> services. I
+knew that they could lazily start services when they are needed but not really
+sure what supported them.</p>
+<p>So reading the <a rel="noopener nofollow noreferrer" target="_blank" href="https://www.freedesktop.org/software/systemd/man/systemd.socket.html">documentation</a> is a bit like drawing the <a rel="noopener nofollow noreferrer" target="_blank" href="https://www.reddit.com/r/restofthefuckingowl/">rest of the owl</a>. It kinda tells you exactly what it is but not much in a way of what it lets you do.</p>
+<p>I still don't get exactly what is going on but my mental model for it all is:</p>
+<ol>
+<li>the <code>*.socket</code> system service will occupy the socket file or network port
+you want to listen to</li>
+<li>upon some initial connection <code>systemd</code> will start the prescribed service</li>
+<li><em>???</em></li>
+<li>profit</li>
+</ol>
+<p>The documentation does elude to a initial connection hand over to the service
+that has started for that <em>✨smooth transition✨</em> but I have never been able to get to
+work.</p>
+<hr />
+<p>The recipe to success:</p>
+<h2 id="install">Install</h2>
+<p>The pre-requisites are having <code>postgresql</code> and <code>systemd</code> installed.</p>
+<ul>
+<li>create <code>postgresql.socket</code> into <code>/usr/lib/systemd/system</code> with the content
+below</li>
+</ul>
+<pre style="background-color:#f9f9f9;color:#111111;"><code><span>[Socket]
+</span><span>ListenStream=/run/postgresql/.s.PGSQL.5432
+</span><span>
+</span><span>[Install]
+</span><span>WantedBy=sockets.target
+</span></code></pre>
+<ul>
+<li>run <code>sudo systemctl enable postgresql.socket</code> to enable the socket service</li>
+<li><em>Optional</em> run <code>sudo systemctl start postgresql.socket</code> to start listening
+now &amp; try it out yourself</li>
+</ul>
+<h2 id="uninstall">Uninstall</h2>
+<ul>
+<li>run <code>sudo systemctl disable postgresql.socket</code> to disable the socket service</li>
+<li>run <code>sudo systemctl stop postgresql.socket</code> to stop the listening socket</li>
+</ul>
+<h2 id="cavets">Cavets</h2>
+<ul>
+<li>slow 1st time usage, may even fail 1st connection attempt</li>
+<li><code>ListenStream</code> needs to point to where postgres would be, e.g. port <code>5432</code> or a socket file.</li>
+<li>This has only been tested on Arch Linux</li>
+</ul>
+<blockquote>
+<p>This post is largely based on an old <a rel="noopener nofollow noreferrer" target="_blank" href="https://gist.github.com/dbanetto/eb7b941740af6e993f1cb1ddeb95beca">gist</a> I did a few years back, so take this as a <a rel="noopener nofollow noreferrer" target="_blank" href="https://www.youtube.com/watch?v=szUJSXBjpJM">dramatic reenactment</a>.</p>
+</blockquote>
+
+					</div>
+				</article>
+
+				<hr />
+				
+				
+			</div>
+		</div>
+	</div>
+</main>
+
+
+	
+	<footer class='footer py-2'>
+		<div class='has-text-centered'>
+			<p class="mb-1">
+				Built with 💻 code and 💖 love
+            </p>
+			<p class="mt-1">
+				Powered By 🐾 Zola
+			</p>
+		</div>
+	</footer>
+	
+
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js'></script>
+	<script src='https://blog.rnett.nz/search_index.en.js'></script>
+	<script src='https://blog.rnett.nz/js/site.js'></script>
+	
+	
+</body>
+
+</html>
