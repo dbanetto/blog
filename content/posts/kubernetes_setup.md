@@ -1,12 +1,12 @@
 +++
-title = "Homelab Kubernetes setup"
+title = "Cloudlab Kubernetes setup"
 description = "Learning and being frugal"
 date = 2025-05-11
 updated = 2025-05-11
 
 [taxonomies]
 categories = ["tech"]
-tags = ["homelab", "kubernetes", "k8s", "infra"]
+tags = ["cloudlab", "homelab", "kubernetes", "k8s", "infra"]
 +++
 
 # Intro
