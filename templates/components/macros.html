@@ -1,4 +1,4 @@
-{% macro social_links(social_config) %}
+{% component social_links(social_config) %}
 <p class='is-size-4'>
 	{% if social_config.github %}
 	<a class="link" href='https://github.com/{{social_config.github}}' target='_blank'>
@@ -15,23 +15,23 @@
 	</a>
 	{% endif %}
 </p>
-{% endmacro %}
+{% endcomponent social_links %}
 
 
-{% macro  page_publish_metadata(page) %}
+{% component  page_publish_metadata(page) %}
 <p class='has-text-grey'>
 	{{ config.extra.author.name }} published on <time datetime='{{page.date}}'>{{ page.date | date(format='%B %d, %Y') }}</time>
 </p>
-{% endmacro %}
+{% endcomponent page_publish_metadata %}
 
-{% macro page_content_metadata(page) %}
+{% component page_content_metadata(page) %}
 <p class='has-text-grey'>
 	🕰️ {{page.reading_time}} min, {{page.word_count}} words
 </p>
-{% endmacro %}
+{% endcomponent page_content_metadata %}
 
 
-{% macro render_categories(categories) %}
+{% component render_categories(categories) %}
 <p>
 	<span class="has-text-black has-text-weight-normal">Categories:</span>
 	{% for category in categories %}
@@ -40,10 +40,10 @@
 	</a>
 	{% endfor %}
 </p>
-{% endmacro %}
+{% endcomponent render_categories %}
 
 
-{% macro render_tags(tags) %}
+{% component render_tags(tags) %}
 <p>
 	<span class="has-text-black has-text-weight-normal">Tags:</span>
 	{% for tag in tags %}
@@ -52,4 +52,4 @@
 	</a>
 	{% endfor %}
 </p>
-{% endmacro %}
+{% endcomponent render_tags %}
