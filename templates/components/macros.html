@@ -1,36 +1,3 @@
-{% component social_links(social_config) %}
-<p class='is-size-4'>
-	{% if social_config.github %}
-	<a class="link" href='https://github.com/{{social_config.github}}' target='_blank'>
-		<span class='icon is-medium'>
-			<i class='fab fa-github'></i>
-		</span>
-	</a>
-	{% endif %}
-	{% if social_config.keybase %}
-	<a class="link" href='https://keybase.io/{{social_config.keybase}}' target='_blank'>
-		<span class='icon is-medium'>
-			<i class='fab fa-keybase'></i>
-		</span>
-	</a>
-	{% endif %}
-</p>
-{% endcomponent social_links %}
-
-
-{% component  page_publish_metadata(page) %}
-<p class='has-text-grey'>
-	{{ config.extra.author.name }} published on <time datetime='{{page.date}}'>{{ page.date | date(format='%B %d, %Y') }}</time>
-</p>
-{% endcomponent page_publish_metadata %}
-
-{% component page_content_metadata(page) %}
-<p class='has-text-grey'>
-	🕰️ {{page.reading_time}} min, {{page.word_count}} words
-</p>
-{% endcomponent page_content_metadata %}
-
-
 {% component render_categories(categories) %}
 <p>
 	<span class="has-text-black has-text-weight-normal">Categories:</span>
