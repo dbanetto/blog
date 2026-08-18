@@ -1,0 +1,726 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - tech</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/categories/tech/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sat, 11 Oct 2025 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Exposing rootless containers</title>
+          <pubDate>Sat, 11 Oct 2025 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/rootless-containers/</link>
+          <guid>https://blog.rnett.nz/posts/rootless-containers/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/rootless-containers/">&lt;h1 id=&quot;problem&quot;&gt;Problem&lt;/h1&gt;
+&lt;p&gt;This all started because I wanted to run some services on a VPS and expose them
+in an easy way. To do this I wanted them to be:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Easy to manage, with no overhead (a.k.a not using Kubernetes)&lt;/li&gt;
+&lt;li&gt;Secure enough for my small scale, using rootless containers&lt;/li&gt;
+&lt;li&gt;Stable enough to survive restarts &amp;amp; neglect&lt;/li&gt;
+&lt;li&gt;(Bonus) Dual-stack IPv4 &amp;amp; v6.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Throughout this post I&#39;ll have the running example of setting up &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://caddyserver.com/&quot;&gt;Caddy reverse-proxy&lt;/a&gt; and &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://freshrss.github.io/FreshRSS/&quot;&gt;FreshRSS&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&quot;managing-containers&quot;&gt;Managing containers&lt;/h1&gt;
+&lt;p&gt;Recently I had a home Kubernetes cluster for this type of thing but that proved to be a large amount
+of effort. So this time I&#39;m aiming for low-tech containerisation solutions like Podman!&lt;/p&gt;
+&lt;p&gt;I happened to come across &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html&quot;&gt;Podman Quadlet&lt;/a&gt;, which
+in short is a Systemd configuration layer on-top of Podman commands.
+It generates &lt;code&gt;.service&lt;/code&gt;&#39;s from &lt;code&gt;.container&lt;/code&gt;, &lt;code&gt;.network&lt;/code&gt; and &lt;code&gt;.volume&lt;/code&gt; and can understand the interlinks between them.&lt;/p&gt;
+&lt;p&gt;The development flow for them are basically:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Look at some &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://wiki.archlinux.org/title/Podman#Quadlet&quot;&gt;examples&lt;/a&gt; or the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html&quot;&gt;docs&lt;/a&gt; for a starting point.&lt;/li&gt;
+&lt;li&gt;Modify them to match a &lt;code&gt;docker-compose.yaml&lt;/code&gt; you&#39;ve found online&lt;/li&gt;
+&lt;li&gt;Put them in the right location, lets say &lt;code&gt;~/.config/containers/systemd&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Run &lt;code&gt;systemctl --user daemon-reload&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Run &lt;code&gt;systemctl --user start container.server&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Use &lt;code&gt;journalctl&lt;/code&gt; to figure what you did wrong &amp;amp; repeat.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id=&quot;setting-up-a-simple-service&quot;&gt;Setting up a simple service&lt;/h1&gt;
+&lt;p&gt;Will start this example with setting up FreshRSS. It only requires three things:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;A container to the service&lt;/li&gt;
+&lt;li&gt;A volume to store its data&lt;/li&gt;
+&lt;li&gt;A port to expose the service&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;For the container you can define it with Quadlet as:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# freshrss.container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Unit]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Description=Fresh RSS container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Container]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ContainerName=freshrss&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Image=index.docker.io/freshrss/freshrss:1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;AutoUpdate=registry # Auto-updating!&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Network=example.network # We&amp;#39;ll get to this soon&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;HostName=freshrss&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=freshrss-data.volume:/var/www/FreshRSS/data # &amp;lt;- Refrence to the volume&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=TZ=Etc/UTC&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=CRON_MIN=1,31&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=LISTEN=:8080&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Service]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Restart=on-failure&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# Extend Timeout to allow time to pull the image&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;TimeoutStartSec=300&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Install]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;WantedBy=default.target&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For the volume, as we are not defining any option it can just be an empty file:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# freshrss-data.volume&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;One of the neat parts of this are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;No &lt;strong&gt;YAML&lt;/strong&gt;! 🎉&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;AutoUpdate=registry&lt;/code&gt;, I get automatic updates from a built-in timer! Now it will update the &lt;code&gt;:1&lt;/code&gt;-label to be the latest version daily.&lt;/li&gt;
+&lt;li&gt;The &lt;code&gt;.container&lt;/code&gt; file references the &lt;code&gt;.volume&lt;/code&gt; and it just works!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You&#39;ll note that we hadn&#39;t actually exposed a port here.
+Which is correct, the container is in a podman network named &lt;code&gt;example.network&lt;/code&gt;.&lt;/p&gt;
+&lt;h1 id=&quot;getting-a-bit-more-complicated-with-caddy&quot;&gt;Getting a bit more complicated with Caddy&lt;/h1&gt;
+&lt;p&gt;With &lt;code&gt;podman&lt;/code&gt; one of the first things you want to setup is a Network, cause the default network does not have DNS resolution
+for other containers.&lt;/p&gt;
+&lt;p&gt;You can create a network via Quadlet with:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# example.network&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Network]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;IPv6=true # &amp;lt;- This makes it a Dualstack network&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Internal=false # &amp;lt;- Allows the network to publish ports to the host&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To define the &lt;code&gt;Caddy&lt;/code&gt; container:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# caddy.container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Unit]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Description=Caddy Reverse Proxy container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Container]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ContainerName=caddy&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Image=caddy.build # &amp;lt;- Links to a locally built image&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Network=example.network # &amp;lt;- Links to our network&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=caddy-config.volume:/config # &amp;lt;- Links volumes&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=caddy-data.volume:/data # &amp;lt;- Links volumes&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=caddy-etc.volume:/etc/caddy # &amp;lt;- Links volumes&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Secret=caddy-cf-api,type=env,target=CF_API_TOKEN # &amp;lt;- Links secrets&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=DOMAIN=example.com&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;HostName=caddy&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;PublishPort=8080:80/tcp&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;PublishPort=8443:443/tcp&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;PublishPort=8443:443/udp&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Service]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Restart=on-failure&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# Extend Timeout to allow time to build the image&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;TimeoutStartSec=900&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Install]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;WantedBy=default.target&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: all of the &lt;code&gt;*.volume&lt;/code&gt; files are just empty files -- I mean, an exercise left to the reader.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;You will note a couple different things to the FreshRSS file, here we have:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The image is referencing a &lt;code&gt;.build&lt;/code&gt; file&lt;/li&gt;
+&lt;li&gt;Reading a &lt;code&gt;podman secret&lt;/code&gt; and injecting it as a environment variable&lt;/li&gt;
+&lt;li&gt;Publishing ports&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&quot;making-quadlet-build-container-image-for-you&quot;&gt;Making Quadlet build container image for you&lt;/h3&gt;
+&lt;p&gt;For the &lt;code&gt;caddy.build&lt;/code&gt; are instructing Quadlet to schedule a &lt;code&gt;systemd&lt;/code&gt; job to build our image.
+Which is super handy with Caddy where extra features like using Cloudflare for Lets Encrypt&#39;s DNS ACME challenge
+requires an addon.&lt;/p&gt;
+&lt;p&gt;You can do with this with&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# caddy.build&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Unit]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Description=Building the caddy container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Requires=network-online.target&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Build]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;File=/home/usr/caddy.Containerfile&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ImageTag=localhost/caddy-cf-dns&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Pull=newer&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;SetWorkingDirectory=unit&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then having a Containerfile like so:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;docker&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;font-style: italic;&quot;&gt;# caddy.Containerfile&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;ARG&lt;/span&gt;&lt;span&gt; CADDY_VERSION=2.9.1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;FROM&lt;/span&gt;&lt;span&gt; docker.io/library/caddy:${CADDY_VERSION}-builder-alpine &lt;/span&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;AS&lt;/span&gt;&lt;span&gt; builder&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;font-style: italic;&quot;&gt;# Pinned dependencies to handle the change of libdns v1.0 APIs&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;RUN&lt;/span&gt;&lt;span&gt; xcaddy build &lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;${CADDY_VERSION}&amp;quot;&lt;/span&gt;&lt;span&gt; \&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    --with github.com/caddyserver/certmagic@b9399eadfbe7ac3092f4e65d45284b3aabe514f8 \&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    --with github.com/caddy-dns/cloudflare@bbf79111721a977fbd13dfe1f5b7aacaf7871a75&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;FROM&lt;/span&gt;&lt;span&gt; docker.io/library/caddy:${CADDY_VERSION}-alpine&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;COPY&lt;/span&gt;&lt;span&gt; --from=builder /usr/bin/caddy /usr/bin/caddy&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: I&#39;ve had some issues with this due to &lt;code&gt;systemd&lt;/code&gt; running this job before
+the internet connectivity is up.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&quot;sssh-keep-this-secret&quot;&gt;Sssh, keep this secret&lt;/h3&gt;
+&lt;p&gt;Using &lt;code&gt;podman secret&lt;/code&gt;&#39;s with Quadlet is quite simple.
+You just need to make them by hand, like so:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #F38BA8;font-style: italic;&quot;&gt;printf&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;secretdata&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt; |&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt; podman&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; secret create caddy-cf-api -&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h1 id=&quot;getting-access&quot;&gt;Getting access&lt;/h1&gt;
+&lt;p&gt;So far we&#39;ve got Caddy and FreshRSS running as Rootless containers, so they cannot bind to any
+privileged port like &lt;code&gt;:80&lt;/code&gt; or &lt;code&gt;:443&lt;/code&gt;. So we need to figure out how to talk to them on those
+port so we can have a good UX.&lt;/p&gt;
+&lt;p&gt;This could either solve this at the router with some port-mapping, or we could do that on the host
+with &lt;code&gt;iptables&lt;/code&gt;!&lt;/p&gt;
+&lt;p&gt;Setting these up by hand are a bit annoying so I&#39;ll be using Ansible here (sorry for the yaml):&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;-&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; name&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; Allow Ingress&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  ansible.builtin.iptables&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    table&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; filter&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    chain&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; INPUT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    protocol&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.proto }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    ip_version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.version }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    destination_port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.port }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    action&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; insert&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    jump&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; ACCEPT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  loop&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;font-style: italic;&quot;&gt;    # External&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;-&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; name&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; Port Forwarding&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  ansible.builtin.iptables&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    table&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; nat&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    chain&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; OUTPUT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    out_interface&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; lo&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    protocol&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.proto }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    match&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.proto }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    ip_version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.version }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    destination_port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.from }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    jump&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; REDIRECT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    to_ports&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.to }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    comment&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Redirect web traffic to Caddy port {{ item.from }}=&amp;gt;{{ item.to }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  loop&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8080&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8080&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: Saving the &lt;code&gt;iptable&lt;/code&gt; changes is an exercise left to the reader. I&#39;m too embarrassed by how I do it to post it.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;With these two blocks the host is setup with an ingress path on the privileged ports and
+are redirected to the unprivileged ports used by the rootless &lt;code&gt;Caddy&lt;/code&gt;!&lt;/p&gt;
+&lt;h1 id=&quot;problem-re-cap&quot;&gt;Problem re-cap&lt;/h1&gt;
+&lt;p&gt;So to re-cap what just happened here:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Easy to manage, with no overhead (a.k.a not using Kubernetes)
+&lt;ul&gt;
+&lt;li&gt;Quadlet makes use of systemd to manage your containers for you&lt;/li&gt;
+&lt;li&gt;It does most of the supporting work too: volumes, networks, image builds, and referencing secrets!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Secure enough for my small scale, using rootless containers
+&lt;ul&gt;
+&lt;li&gt;Rootless with Quadlet + Podman is an easy as &lt;code&gt;systemctl --user start&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Stable enough to survive restarts &amp;amp; neglect
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;systemd&lt;/code&gt; handles all my restart woes&lt;/li&gt;
+&lt;li&gt;Podman&#39;s &lt;code&gt;AutoUpdate=registry&lt;/code&gt; ensure my images are up to date&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;(Bonus) Dual-stack IPv4 &amp;amp; v6.
+&lt;ul&gt;
+&lt;li&gt;It was just a flag in the &lt;code&gt;.network&lt;/code&gt;, how easy.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Overall, this has been a setup &amp;amp; forget situation.
+The only time I have had an issue is when the container builds broke
+due dependencies moving between major version of &lt;code&gt;libdns&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;I&#39;d give it a 4/5, good for home-scale 👍&lt;/p&gt;
+</description>
+      </item>
+      <item>
+          <title>Cloudlab Kubernetes setup</title>
+          <pubDate>Sun, 11 May 2025 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/kubernetes-setup/</link>
+          <guid>https://blog.rnett.nz/posts/kubernetes-setup/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/kubernetes-setup/">&lt;h1 id=&quot;intro&quot;&gt;Intro&lt;/h1&gt;
+&lt;p&gt;This post is about some of the things that I&#39;ve learnt while setting
+up a small scale Kubernetes cluster for my &quot;cloudlab&quot; to learn from.&lt;/p&gt;
+&lt;h2 id=&quot;settings-the-stage&quot;&gt;Settings the stage&lt;/h2&gt;
+&lt;p&gt;At &lt;code&gt;$day_job&lt;/code&gt; I work with a few Kubernetes clusters and in particular at the
+lower layers of the stack. Messing around with that tech is often needing to
+rebuild clusters and mess them up good.&lt;/p&gt;
+&lt;p&gt;I have had a mulit-node homelab Kubernetes setup that got way too complicated
+and died at the hands of an operator failure that I couldn&#39;t be bothered to recover from
+(TL;DR longhorn + changing CNI == not a good time).&lt;/p&gt;
+&lt;p&gt;So, I decided to branch out of the old laptops under desk to the &lt;strong&gt;&lt;em&gt;THE CLOUD&lt;/em&gt;&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;I set out with the goal of:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Learn more about IPv6 &amp;amp; use with Kubernetes&lt;/li&gt;
+&lt;li&gt;Strictly use the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gateway-api.sigs.k8s.io/&quot;&gt;Gateway API&lt;/a&gt; and be able to use &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gateway-api.sigs.k8s.io/docs/mesh/mesh-overview/&quot;&gt;GAMMA&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Spending as little as a I can&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;selecting-an-cloud-infra-provider&quot;&gt;Selecting an ☁️ Infra provider&lt;/h2&gt;
+&lt;p&gt;Selecting a provider is like trying to find a sticky Telco that you
+know you&#39;ll be paying for until your cloudlab-phase passed away.
+So to help start the selecting process I came up with some metrics of
+success:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;At least 2 vCPUs&lt;/li&gt;
+&lt;li&gt;At least 2 GiB RAM&lt;/li&gt;
+&lt;li&gt;At least 100+ GiB of traffic, just in case&lt;/li&gt;
+&lt;li&gt;Have a reasonable latency (&lt;em&gt;#JustAPACThings&lt;/em&gt; ;-;)&lt;/li&gt;
+&lt;li&gt;Cost to be less than AUD$10-per-node a month&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;After going through the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudprovider&quot;&gt;cluster-autoscaler&lt;/a&gt; provider list I eventually
+landed on &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://hetzner.cloud/?ref=FHajdRC5nJ8C&quot;&gt;Hetzner (my referral link)&lt;/a&gt; as it is by &lt;em&gt;far&lt;/em&gt; the cheapest provider, even with the currency conversion.&lt;/p&gt;
+&lt;h3 id=&quot;infra-setup&quot;&gt;Infra setup&lt;/h3&gt;
+&lt;p&gt;The original &quot;just get it working&quot; setup was:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;1 control plane node&lt;/li&gt;
+&lt;li&gt;1 worker node&lt;/li&gt;
+&lt;li&gt;1 Loadbalancer&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Using:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.talos.dev/&quot;&gt;Talos&lt;/a&gt; for Kubernetes distribution&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://cilium.io/&quot;&gt;Cilium&lt;/a&gt; for CNI, IPAM, and Ingress&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/hetznercloud/hcloud-cloud-controller-manager&quot;&gt;hetznercloud/hcloud-cloud-controller-manager&lt;/a&gt; for load balancer&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/hetznercloud/csi-driver&quot;&gt;hetznercloud/csi-driver&lt;/a&gt; for dynamic volumes&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/kubernetes-sigs/external-dns/&quot;&gt;external-dns&lt;/a&gt; to plumb load balancers to DNS&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&quot;first-lesson-do-i-need-ipv4&quot;&gt;First lesson: Do I need IPv4?&lt;/h1&gt;
+&lt;p&gt;I could save many cents a month if I did not use IPv4 addresses on Hetzner, so of course I tried
+to not use them. They give free IPv6 addresses for the nodes so I can still get some sweet
+internet!&lt;/p&gt;
+&lt;p&gt;I hit a few snags along the way... like most of the internet is still only using IPv4 🧓.
+Which I did find some cool services to help get around that, namely &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://nat64.net/&quot;&gt;nat64.net&lt;/a&gt;
+which provides a DNS resolver and NAT64 to plug the gap.&lt;/p&gt;
+&lt;p&gt;As a Talos patch this looked like:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;machine&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  sysctls&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    net.ipv6.conf.all.forwarding&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  network&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    nameservers&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;font-style: italic;&quot;&gt;      # https://nat64.net/&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      -&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; 2a01:4f9:c010:3f02::1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      -&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; 2a01:4f8:c2c:123f::1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      -&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; 2a00:1098:2c::1&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;After which got the Talos control plane to a &lt;code&gt;Ready&lt;/code&gt; state.&lt;/p&gt;
+&lt;p&gt;Next problem... the Pod and Service IPs were not assigning correctly
+and all of the connectivity tests were failing once another node was added.&lt;/p&gt;
+&lt;p&gt;Turned out that I was in a bit of a pickle cause Hetzner assigns whole &lt;code&gt;/64&lt;/code&gt;&#39;s to each
+node with public IPv6 and they&#39;re a bit random and discontinuous across nodes.
+Kubenretes does not yet support adding new Pod CIDR ranges and assigning them to single nodes
+natively. Cilium does have &lt;code&gt;CiliumNode&lt;/code&gt; which can specify a &lt;code&gt;.spec.podCIDRs&lt;/code&gt; but at this point
+I&#39;ve been a month deep &amp;amp; was about to gave up on life with computers.&lt;/p&gt;
+&lt;p&gt;So in the end I gave up on my dream of being IPv4-less and have dualstack on the nodes and the
+Kubernetes cluster itself are using private addresses.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;📝 &lt;strong&gt;Take away&lt;/strong&gt;: Keep it simple for a first cluster! Come back for IPv6 later&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&quot;second-lesson-why-do-i-need-a-load-balancer&quot;&gt;Second lesson: Why do I need a load balancer?&lt;/h1&gt;
+&lt;p&gt;I got whole dedicated load balancer for my 1 worker node...
+That&#39;s not very cost effective is it, but it was so easy to setup and get working.
+The control plane node is excluded from the pool due to its label
+&lt;code&gt;node.kubernetes.io/exclude-from-external-load-balancers&lt;/code&gt;.
+So lets remove that overkill load balancer!&lt;/p&gt;
+&lt;p&gt;Previously I had been using &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.k3s.io/networking/networking-services#service-load-balancer&quot;&gt;&lt;code&gt;k3s&lt;/code&gt;s&#39; svclb&lt;/a&gt;
+which uses the node&#39;s IP as its &lt;code&gt;LoadBalancer&lt;/code&gt; IPs instead of needing extenral virtual IPs.
+Luckily for me Cilium has a similar concept with &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.cilium.io/en/stable/network/node-ipam/#node-ipam&quot;&gt;Node IPAM&lt;/a&gt;!&lt;/p&gt;
+&lt;p&gt;Now at this point I was using Cilium&#39;s Gateway API implementation, which is... how do I put it.
+&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/cilium/cilium/pull/39038&quot;&gt;Incomplete&lt;/a&gt; and a &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gateway-api.sigs.k8s.io/implementations/v1.2/&quot;&gt;leader&lt;/a&gt; at the same time. So naturally I ran into issues in trying to use
+Node IPAM with Cilium&#39;s Gateway API.&lt;/p&gt;
+&lt;p&gt;The goal is to have the &lt;code&gt;v1.Service&lt;/code&gt; of &lt;code&gt;cilium-&amp;lt;gateway-name&amp;gt;&lt;/code&gt; to have &lt;code&gt;spec.loadBalancerClass: io.cilium/node&lt;/code&gt;.
+I ended needing to move to &lt;code&gt;v1.18.0-pre-release&lt;/code&gt; (note &lt;em&gt;pre-release&lt;/em&gt;) to use the new object
+&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/cilium/cilium/blob/v1.18.0-pre.1/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumgatewayclassconfigs.yaml&quot;&gt;&lt;code&gt;CiliumGatewayClassConfig&lt;/code&gt;&lt;/a&gt; object to configure the &lt;code&gt;loadBalancerClass&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;It would kinda work, but not for privileged ports (&amp;lt;1024), and if you set the
+&lt;code&gt;gatewayAPI.hostNetwork.enabled true&lt;/code&gt; then it stops working. The latter becoming a culprit
+after finding this &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/cilium/cilium/issues/38227#issuecomment-2734913950&quot;&gt;issue comment&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;After that I gave up on Cilium&#39;s Gateway API and looked for another implementation that
+supports setting the &lt;code&gt;spec.loadBalancerClass&lt;/code&gt; which to my surprise is two! 🤯&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gateway.envoyproxy.io/docs/api/extension_types/#envoyproxy&quot;&gt;envoy-gateway&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment&quot;&gt;Istio&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;So I went with Istio in Ambient mode to complicate my setup more which removed the need
+for a dedicated load balancer. Now I&#39;m relying on DNS client behavior to balance between
+my 1 node.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;📝&lt;strong&gt;Take away&lt;/strong&gt;: Gateway API is really new, a lot of knobs are not available yet.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&quot;conculsion&quot;&gt;Conculsion&lt;/h1&gt;
+&lt;p&gt;I&#39;ve learnt a lot from this cloudlab already:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;IPv6 takes more thought than expected and Hetzner&#39;s implementation requires some extra concepts&lt;/li&gt;
+&lt;li&gt;Gateway API might be GA but the implementations don&#39;t feel like it&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+      </item>
+      <item>
+          <title>Slack custom emoji shinighans</title>
+          <pubDate>Mon, 28 Feb 2022 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/slack-custom-emoji/</link>
+          <guid>https://blog.rnett.nz/posts/slack-custom-emoji/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/slack-custom-emoji/">&lt;p&gt;This will be a quick one, I swear.&lt;/p&gt;
+&lt;p&gt;I&#39;ll start with the morale of the story:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Some things are unexpected exhilf paths when they are working as designed.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;This story is about a widely used and the &quot;IRC-of-web2.js&quot;: Slack and its loved custom emojis.&lt;/p&gt;
+&lt;h2 id=&quot;custom-emojis-how-do-they-work&quot;&gt;Custom emojis, how do they work&lt;/h2&gt;
+&lt;p&gt;Let&#39;s all get one the same page here:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Slack lets you to just upload little &lt;code&gt;png&lt;/code&gt;&#39;s&lt;/li&gt;
+&lt;li&gt;These are great for building a sense of community on a slack space&lt;/li&gt;
+&lt;li&gt;A lot of memes get uploaded&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To dig deeper you need to use a tool that is considered illegal in some jurisdictions,
+so use at your own risk: Inspect Element.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/images/slack_custom_emoji/inspect-element.png&quot; alt=&quot;A screenshot of Firefox development console with an image tag highlighed and a hover image of Picard faceplaming&quot; /&gt;&lt;/p&gt;
+&lt;h2 id=&quot;slack-emojis-are-public-and-unauthenticated&quot;&gt;Slack emojis are &lt;em&gt;PUBLIC&lt;/em&gt; and &lt;em&gt;UNAUTHENTICATED&lt;/em&gt;&lt;/h2&gt;
+&lt;p&gt;I&#39;ll be using a open invite Slack instance for these examples: &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://lastweekinaws.slack.com/&quot;&gt;lastweekinaws.slack.com&lt;/a&gt;
+hosted by the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.duckbillgroup.com/&quot;&gt;Duck Bill group&lt;/a&gt;. That Slack&#39;s team id is: &lt;code&gt;T02N6U1DVD4&lt;/code&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Not a paid advertiment, just here to spread good shit posters &lt;em&gt;cough&lt;/em&gt; &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://twitter.com/quinnypig&quot;&gt;@quinnypig&lt;/a&gt; &lt;em&gt;cough&lt;/em&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;So, as you may know that the URLs for custom emojis are public and anyone can look at them if they have the URL.
+The format of these urls look like this:&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;https://emoji.slack-edge.com/T02N6U1DVD4/squirrel/465f40c0e0.png&lt;/code&gt; aka&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://emoji.slack-edge.com/T02N6U1DVD4/squirrel/465f40c0e0.png&quot; alt=&quot;A picture of a squirrel wearing a fedora and a suit&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;After some playing around, these urls can be expressed as &lt;code&gt;${team_id}/${emoji_name}/${cache_buster_hash}.png&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;base url is always &lt;code&gt;https://emoji.slack-edge.com&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;${team_id}&lt;/code&gt; the identifier for the slack intance&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;${emoji_name}&lt;/code&gt; is easy and quite guessable cause so many people like to recreate their last work slack in their new place, like &lt;code&gt;:falcepalm:&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;${cache_buster_hash}&lt;/code&gt; is a random 10 character hex string so it can bust some caches&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;side note: &lt;code&gt;:squirrel:&lt;/code&gt;  is a custom emoji on all instances &amp;amp; can be used to confirm an &lt;code&gt;team_id&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;The &lt;code&gt;${cache_buster_hash}&lt;/code&gt; part seems to be a bit finiky. For &lt;code&gt;:squirrel:&lt;/code&gt; it can be &lt;strong&gt;any&lt;/strong&gt; value.
+So &lt;code&gt;0000000000&lt;/code&gt; is perfectly valid and is great to verify a &lt;code&gt;${team_id}&lt;/code&gt;&lt;/p&gt;
+&lt;h2 id=&quot;ok-but-so-what&quot;&gt;Ok, but so what?&lt;/h2&gt;
+&lt;p&gt;Well, it is handy to know and if you ever want to spook your security team
+just let them know that employee PII (photos) in the form of emojis are publicly
+accessible with three easy steps:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Post the emoji in question&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;Right click &amp;gt; Copy Image Link&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Open that link in a private window / incognito window&lt;/li&gt;
+&lt;li&gt;🤯🧑‍💻 &lt;!-- I hope that ZWJ works everywhere --&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Though, you do need to have 3 pieces of information to get to it without it getting help from the inside.&lt;/p&gt;
+&lt;p&gt;I did take this to the Slack enterprise people once in a past job.
+The response was: &quot;Working as designed&quot;.&lt;/p&gt;
+&lt;h2 id=&quot;what-can-i-do-really-do-with-this&quot;&gt;What can I do really do with this?&lt;/h2&gt;
+&lt;p&gt;Well, not that much... you need to know the &lt;code&gt;${team_id}&lt;/code&gt; of the slack instance you are interested in and sometimes the &lt;code&gt;${cache_buster_hash}&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;That is hard if you didn&#39;t save it somewhere before you got kicked off for spamming &lt;code&gt;:flag-ua::muscle::flag-ua:&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;So far I have not found any unauthenticated way to get that &lt;code&gt;${team_id}&lt;/code&gt; but the &lt;code&gt;:squirrel:&lt;/code&gt; trick is great
+to confirm a slack instance.&lt;/p&gt;
+&lt;h2 id=&quot;conculsion-faq&quot;&gt;Conculsion / FAQ&lt;/h2&gt;
+&lt;p&gt;Is Slack emojis good for storing important information?&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;No, but this is not an invitation to start using GUID&#39;s as emoji names nor to stop making wholesome memes of colleagues &lt;strong&gt;with their consent&lt;/strong&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;So why are Slack emojis public?&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;lol, no idea. Probably cause of some &lt;del&gt;legacy&lt;/del&gt; money generating systems&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Should I save my companies Slack&#39;s &lt;code&gt;${team_id}&lt;/code&gt; before I leave so I can download all my emojis later??&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Nah. Just treat your favourte emojis like NFT&#39;s, &lt;code&gt;right-click &amp;gt; Save Image As ...&lt;/code&gt; them cause who knows when the server is going offline.&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+      </item>
+      <item>
+          <title>AWS SSO Deeeep Dive</title>
+          <pubDate>Sun, 11 Apr 2021 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/aws-sso-deep-dive/</link>
+          <guid>https://blog.rnett.nz/posts/aws-sso-deep-dive/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/aws-sso-deep-dive/">&lt;!--
+ What to cover:
+  - intro to AWS SSO
+  - What the cli experience is like
+  - What APIs are happening
+--&gt;
+&lt;h1 id=&quot;what-is-even-sso&quot;&gt;What is even SSO?!&lt;/h1&gt;
+&lt;p&gt;SSO is the fancy TLA for &lt;strong&gt;S&lt;/strong&gt;ingle &lt;strong&gt;S&lt;/strong&gt;ign &lt;strong&gt;O&lt;/strong&gt;n, which is the great of idea
+of having just having to login into one place &amp;amp; then authenticate into other
+services when you want to. Some kind people have put great effort into the
+&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://en.wikipedia.org/wiki/Single_sign-on&quot;&gt;Wikipeia&lt;/a&gt; page for it,
+recommended to get more familiar with the idea.&lt;/p&gt;
+&lt;p&gt;Generally it is a very &lt;em&gt;Enterprise Plan&lt;/em&gt; feature so us mere
+mortals that cannot pay the usual USD$50/user/month (minimum 50 users) don&#39;t get to see it much.
+Of course with the exception of the &quot;Social&quot; logins (&quot;Sign in with Facebook/Google&quot;)
+and AWS that provides it FOR FREE.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: that none of these companies named sponsored this post&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;the-lab-setup&quot;&gt;The &quot;&lt;em&gt;Lab&lt;/em&gt;&quot; Setup&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Developer account for &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://developer.okta.com/&quot;&gt;Okta&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Free tier &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://aws.amazon.com/&quot;&gt;AWS Account&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Use &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html&quot;&gt;AWS CLI v2&lt;/a&gt;, SSO support is only in V2+&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Setting up basic use of &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/singlesignon/latest/userguide/okta-idp.html&quot;&gt;Okta as the &lt;strong&gt;Id&lt;/strong&gt;entity &lt;strong&gt;P&lt;/strong&gt;rovider (IdP)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;I will not be going through how to setup this &quot;&lt;em&gt;lab&lt;/em&gt;&quot;, AWS &amp;amp; Okta have some
+&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/singlesignon/latest/userguide/okta-idp.html&quot;&gt;nice docs&lt;/a&gt; on how to&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;To start, the native way of getting credentials for a session are the following:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;aws sso login &amp;lt;profile_name&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And from there lets see what has done.&lt;/p&gt;
+&lt;h2 id=&quot;what-has-that-done&quot;&gt;What has that done?&lt;/h2&gt;
+&lt;p&gt;There is some new mess in your &lt;code&gt;~/.aws&lt;/code&gt; folder.&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&amp;gt; find ~/.aws -exec file {} \;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/config: ASCII text&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/cli: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/cli/cache: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/cli/cache/0000000000000000000000000000000000000000.json: JSON data&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso/cache: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso/cache/botocore-client-id-ap-southeast-9.json: JSON data&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso/cache/1111111111111111111111111111111111111111.json: JSON data&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And in the &lt;code&gt;~/.aws/config&lt;/code&gt; there is now a profile&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[profile RoleAccess-000000000000]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_start_url = https://d-0000000000.awsapps.com/start#/&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_region = ap-southeast-9&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_account_id = 000000000000&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_role_name = RoleAccess&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&quot;cache-files&quot;&gt;Cache files?!&lt;/h3&gt;
+&lt;p&gt;Those cache files are new and interesting. So what are in those?&lt;/p&gt;
+&lt;h4 id=&quot;cli-cache&quot;&gt;CLI cache&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;~/.aws/cli/cache/0000000000000000000000000000000000000000.json&lt;/code&gt;&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;ProviderType&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;sso&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Credentials&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;AccessKeyId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ASIA0000000000000000&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;SecretAccessKey&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot; -- classic secret access key high entropy stuff here --&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;SessionToken&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot; -- big old session token --&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Expiration&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2021-02-11T09:12:40Z&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Taking these credentials out they actually work.&lt;/p&gt;
+&lt;p&gt;So this looks like how AWS CLI v2 handles your SSO sessions and just keeps them
+to the side for you.&lt;/p&gt;
+&lt;p&gt;The file name looks to be a hash so guessing the name is pretty hard for a file
+inclusion attack unlike the ye &#39;old &lt;code&gt;~/.aws/credentials&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Though these look to be stable hashes per profile.&lt;/p&gt;
+&lt;h4 id=&quot;sso-file&quot;&gt;SSO File&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;~/.aws/sso/cache/1111111111111111111111111111111111111111.json&lt;/code&gt;&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;startUrl&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;https://d-0000000000.awsapps.com/start#/&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;region&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ap-southeast-9&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;accessToken&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;eyJlbmMiOiJBMjU2R0NNIiwidGFnIjoiSm5udXRHU0tKTVVTb1RqRyIsImFsZyI6IkEyNTZHQ01LVyIsIml2IjoiazNiZXlaeEtDR0otc05VQyJ9.AYABeObaD6db3xtlf2VyQV4uZbcAHwABABBEYXRhUGxhbmVTZXNzaW9uAAlQZXJlZ3JpbmUAAQAHYXdzLWttcwBQYXJuOmF3czprbXM6YXAtc291dGhlYXN0LTI6NDEyMjAxMDI1ODU4OmtleS9kMTEwZTQ1ZC1mMGVhLTQ4NTYtYmFjNS0xMmMyYTMxM2Q2YWEAuAECAQB4Pcqs65qFZyXWdyHZA9hnHzXOhvyEOzDstw3xH4zNak0BY6qRWzxkq86qEu6rfKsXwQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDLXUMJLzS47DezlQSAIBEIA7lHcufjSiF9_gCd_IcRwk9NoCCnr9JmXvmWygjueAsEigiiXZ3WUF-K64_lSWTdaT9dC8rGDIh2-nEjoCAAAAAAwAABAAAAAAAAAAAAAAAAAAAFNQZGeo3pZnmaTvFFpgff____8AAAABAAAAAAAAAAAAAAABAAAAIAoOunYoPR2JIAc65uLD1QkKwC7dH1NzyRkba108s0-XEVJFBRIH1bPqAUpp7NaJyg.dzmoGCWoLlq-x4GZ.IHhQ2ffvTLAQQfffWXu9QvnEg1dir26R1HZ5gcNX1QcScFq15-AE_9ylR9djZyTv2qCk3xHRdx26oGhhK50m6DbryV2wy1OsEL_UpbAdt4x18upnSJsQXEcnug9mEbdP8P-XtXCzhCMT2yCahatqvsifKagyInM2vQATNZRc87r2pM4qy_z4h3rmzBpvXw6_lQ5AN7gZXN1urAGELHGanrHzkCX80msZskK1_RFIQbO0HADjfTnEeK1UmNXaXpFbq2oMI-NHIbkGsf8_XhY3AFX-EZfqS_MmgPAQAJ-fTF4P8vlJ4-UHQTX3onws_v3LWoqGA8Tlf-Vrf76mqUqN-ZUtnsUeP-0NVy2dDZu3z54xghta40Dbly9QVItaGzB9oSXJKn-NwiBdKxm6F0BhC9TShFghZ-k9P0JFCuHvl7lKlETTSH1tnQXlRvTlAwN7hagZWMqw91fZgg9v_Ujc6w.zj3d2TiDLW7ajD5NVf6P0A&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;expiresAt&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2021-02-11T16:12:30Z&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Hmm a string starting with &lt;code&gt;ey&lt;/code&gt;?! Is this a JWT?!&lt;/p&gt;
+&lt;p&gt;Header contains the following.&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;enc&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;A256GCM&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;tag&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;JnnutGSKJMUSoTjG&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;alg&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;A256GCMKW&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;iv&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;k3beyZxKCGJ-sNUC&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;There is a few crypto stuff that has gone over my head, but from searching for
+the algorithm (under &lt;code&gt;alg&lt;/code&gt; key) &lt;code&gt;A256GCMKW&lt;/code&gt; found a &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://stackoverflow.com/questions/38122521/what-is-the-algorithm-string-for-agcm256-kw-in-java-cryptography-to-be-used-i&quot;&gt;helpful StackOverflow
+thread&lt;/a&gt;.
+The key points I got from it are&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;AES256&lt;/code&gt; encryption algorithm used with the following options,&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;GCM&lt;/code&gt; - to detonate it is in &lt;code&gt;GCM&lt;/code&gt; mode&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;KW&lt;/code&gt; - to detonate that key wrapping is used&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Does this help much? Not really.&lt;/p&gt;
+&lt;p&gt;Now for the body (decoded by the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gchq.github.io/CyberChef/&quot;&gt;CyberChef themselves&lt;/a&gt;)&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;...xæÚ.§[ß.e.erA^.e·......DataPlaneSession.	Peregrine....aws-kms.Parn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa.¸....x=Ê¬ë..g%Öw!Ù.Øg.5Î.ü.;0ì·&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ñ..ÍjM.cª.[&amp;lt;d«Îª.î«|«.Á...~0|.	*.H.÷&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;... o0m...0h.	*.H.÷&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;...0..	`.H.e....0...µÔ0.óK.Ã{9PH....;.w.~4¢.Ø.t..ÂOM  §¯Òf^ù.Ê.îx....¢].ÖPRºâT.MÖ.õÐ¼¬`È.iÄ.........................Ô..ê7¥.æi;Å....À...@...........@.....®...GbH.Î¹¸°õBB°.·GÔÜòFFÚ×O,Ñq.$PQ }[&amp;gt; .¦.Íh. w9¨.%¨.Z±àfH..6}ûÓ,..}÷Ö^ïP¾q ÕØ«Û¤u..`pÕõAÄ...y.Or..]...¿j..|GEÜvê.¡.®t. Û¯%vÃ-N°BÔ¥°.·.uòêgH..\G&amp;#39;º.f.·Oðõí\,á.ÄöÈ&amp;amp;¡jÚ¯²&amp;#39;Êj...Í¯@.Íe.&amp;lt;î½©3.²Ï.w®lÁ¦õðêT9.Þàesuº°..±ÆjzÇÎ@.óI¬fÉ&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Õ.HA³´..ã}9Äx.T.ÕÚ^.[«j. ÑÈnA¬.Åácp.\F_©#&amp;amp;.ð...Ó..ü¾RxPt._z&amp;#39;ÂË÷-j*....õk.¾¦©J.eKg±G.ÐÕrÙÐÙ»|ùã.!µ®4&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;¹rõ.Hµ¡³.Ú.\.§7..t¬fè]../SJ.`..=?BE&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;áï.¹J.DÓH}m..åFôå..{.¨.XÊ°÷WÙ..oR7:Ä&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Um... wat?! This looks very cyber encrypted but also is that a ARN in there?
+And what is this &lt;code&gt;DataPlaneSession&lt;/code&gt;?!&lt;/p&gt;
+&lt;p&gt;That KMS key id &lt;code&gt;arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;/code&gt; is a bit strange.
+The account id is not one of &lt;em&gt;mine&lt;/em&gt;, so it must be an AWS managed account. So
+lets try some basic KMS operations on the key to see if there is a permissive
+key policy.&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; aws kms describe-key --region ap-southeast-2 --key-id arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;An&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; error occurred&lt;/span&gt;&lt;span&gt; (AccessDeniedException) when calling the DescribeKey operation:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; aws kms encrypt --region ap-southeast-2 --key-id arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa --plaintext &lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;$(&lt;/span&gt;&lt;span style=&quot;color: #F38BA8;font-style: italic;&quot;&gt;echo&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; lol&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt; |&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt; base64&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; -&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;An&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; error occurred&lt;/span&gt;&lt;span&gt; (AccessDeniedException) when calling the Encrypt operation:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; aws kms decrypt --region ap-southeast-2 --key-id arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa --ciphertext-blob &lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;$(&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;base64&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; jwt_body&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;An&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; error occurred&lt;/span&gt;&lt;span&gt; (InvalidCiphertextException) when calling the Decrypt operation:&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Ok, so that is mostly a no from what I know about KMS keys. Though that &lt;code&gt;InvalidCiphertextException&lt;/code&gt; might be an &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://en.wikipedia.org/wiki/Oracle_attack&quot;&gt;oracle vector&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I do wonder if it is the same KMS key for everyone that has deployed their SSO
+into that region or if it is per customer.&lt;/p&gt;
+&lt;p&gt;The former might allow a path for token reuse between SSO instances, while the
+latter would mean a $1/month/per customer instance fee for the SSO team that they
+are kindly not passing onto the customer (please thank your local SSO team
+member today).&lt;/p&gt;
+&lt;p&gt;If I ever get around to make more SSO instances I&#39;ll update this post with
+those findings.&lt;/p&gt;
+&lt;h4 id=&quot;signature-section&quot;&gt;Signature section&lt;/h4&gt;
+&lt;p&gt;There isn&#39;t really anything we can get from this section as the algorithm is
+symmetric (AES) so we are not gonna get anything from it.&lt;/p&gt;
+&lt;h3 id=&quot;access-token&quot;&gt;Access Token&lt;/h3&gt;
+&lt;p&gt;Jumping back a bit, but that &lt;code&gt;accessToken&lt;/code&gt; in &lt;code&gt;~/.aws/sso/cache/1111111111111111111111111111111111111111.json&lt;/code&gt; file is really interesting.
+It is used with the AWS SSO API to vend out access keys into accounts.&lt;/p&gt;
+&lt;p&gt;It is essentially a replacement for your login credentials to your IdP, MFA and
+all but with a time boxed existence.
+From this token you can iterate all your accounts you have access to, the
+roles in each of those accounts and then generate access keys for them.&lt;/p&gt;
+&lt;p&gt;The flow goes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccounts&lt;/code&gt; - takes the access token. Returns a list of accounts that
+the token can access&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccountRoles&lt;/code&gt; - takes the access token, and account id. Returns a
+list of roles the token can use in said account&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sso:GetRoleCredentials&lt;/code&gt; - takes the access token, account id and role name.
+Returns working access keys for the role in said account.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;For details about these actions have a look at the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sso.html&quot;&gt;Boto3 docs for SSO service&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;These actions are recorded in CloudTrail. To be honest I am surprised as these
+are at all since they are using Access Tokens instead of &lt;code&gt;STS&lt;/code&gt; access keys.&lt;/p&gt;
+&lt;p&gt;Here is an example event:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventVersion&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;1.08&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;userIdentity&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;type&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Unknown&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;principalId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;aaaaaaaaaa-bbbbbbbb-cccc-dddd-eeee-ffffffffffff&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;accountId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;000000000000&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;userName&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;user@example.com&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    },&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventTime&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2021-03-28T00:26:05Z&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventSource&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;sso.amazonaws.com&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventName&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ListAccountRoles&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;awsRegion&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ap-southeast-2&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;sourceIPAddress&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;8.8.8.8&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;userAgent&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Boto3/1.17.5 Python/3.9.2 Linux/5 Botocore/1.20.5&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;requestParameters&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; null&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;responseElements&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; null&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;requestID&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;7e0ffa90-e6cc-497a-982e-42ef7db5b415&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventID&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;b02878f9-a936-4027-9338-16fdba509113&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;readOnly&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventType&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;AwsServiceEvent&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;managementEvent&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventCategory&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Management&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;recipientAccountId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;000000000000&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;serviceEventDetails&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;account_id&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;000000000000&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h1 id=&quot;self-plug&quot;&gt;Self-plug&lt;/h1&gt;
+&lt;p&gt;From working with SSO I hobbled together a couple of scripts to automate the
+setup of some of the annoying parts of AWS SSO, namely &lt;code&gt;aws sso login&lt;/code&gt;
+ssuucckks.&lt;/p&gt;
+&lt;p&gt;You get shoved to a browser every time when you got perfectly good cached
+credentials on disk! So these scripts &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/drbarnz/aws-sso-tools&quot;&gt;drbarnz/aws-sso-tools&lt;/a&gt;
+handle most of the time when you have to use that command.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Initial login&lt;/li&gt;
+&lt;li&gt;Switching profiles (account/role)&lt;/li&gt;
+&lt;li&gt;Generating profiles in &lt;code&gt;~/.aws/config&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&quot;take-aways&quot;&gt;Take Aways&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;SSO is cool if you want short lived credentials locally available&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;~/.aws/credentials&lt;/code&gt; are out &lt;code&gt;~/.aws/cli/${HASH}.json&lt;/code&gt; are in for access
+keys&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;~/.aws/sso/cache/${HAS}.json&lt;/code&gt;&#39;s &lt;code&gt;accessToken&lt;/code&gt; is same as login credentials
+but time boxed&lt;/li&gt;
+&lt;li&gt;SSO sessions do not make a mess of environment variables&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;extra-reading&quot;&gt;Extra Reading&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/singlesignon/latest/userguide/understanding-key-concepts.html&quot;&gt;AWS SSO&#39;s docs on SSO&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sso.html&quot;&gt;Boto3 docs for SSO service&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/drbarnz/aws-sso-tools&quot;&gt;AWS SSO tooling&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+      </item>
+      <item>
+          <title>Lazy Postgres</title>
+          <pubDate>Mon, 23 Apr 2018 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/lazy-postgres/</link>
+          <guid>https://blog.rnett.nz/posts/lazy-postgres/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/lazy-postgres/">&lt;h2 id=&quot;background&quot;&gt;Background&lt;/h2&gt;
+&lt;p&gt;Sometimes I want to have local services for some development work outside of a
+container but I don&#39;t want to run them if I&#39;m not using them.&lt;/p&gt;
+&lt;p&gt;After using &lt;code&gt;systemd&lt;/code&gt; for a while I got curious about the &lt;code&gt;.socket&lt;/code&gt; services. I
+knew that they could lazily start services when they are needed but not really
+sure what supported them.&lt;/p&gt;
+&lt;p&gt;So reading the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.freedesktop.org/software/systemd/man/systemd.socket.html&quot;&gt;documentation&lt;/a&gt; is a bit like drawing the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.reddit.com/r/restofthefuckingowl/&quot;&gt;rest of the owl&lt;/a&gt;. It kinda tells you exactly what it is but not much in a way of what it lets you do.&lt;/p&gt;
+&lt;p&gt;I still don&#39;t get exactly what is going on but my mental model for it all is:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;the &lt;code&gt;*.socket&lt;/code&gt; system service will occupy the socket file or network port
+you want to listen to&lt;/li&gt;
+&lt;li&gt;upon some initial connection &lt;code&gt;systemd&lt;/code&gt; will start the prescribed service&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;???&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;profit&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The documentation does elude to a initial connection hand over to the service
+that has started for that &lt;em&gt;✨smooth transition✨&lt;/em&gt; but I have never been able to get to
+work.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;The recipe to success:&lt;/p&gt;
+&lt;h2 id=&quot;install&quot;&gt;Install&lt;/h2&gt;
+&lt;p&gt;The pre-requisites are having &lt;code&gt;postgresql&lt;/code&gt; and &lt;code&gt;systemd&lt;/code&gt; installed.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;create &lt;code&gt;postgresql.socket&lt;/code&gt; into &lt;code&gt;/usr/lib/systemd/system&lt;/code&gt; with the content
+below&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Socket]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ListenStream=/run/postgresql/.s.PGSQL.5432&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Install]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;WantedBy=sockets.target&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl enable postgresql.socket&lt;/code&gt; to enable the socket service&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Optional&lt;/em&gt; run &lt;code&gt;sudo systemctl start postgresql.socket&lt;/code&gt; to start listening
+now &amp;amp; try it out yourself&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;uninstall&quot;&gt;Uninstall&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl disable postgresql.socket&lt;/code&gt; to disable the socket service&lt;/li&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl stop postgresql.socket&lt;/code&gt; to stop the listening socket&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;cavets&quot;&gt;Cavets&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;slow 1st time usage, may even fail 1st connection attempt&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;ListenStream&lt;/code&gt; needs to point to where postgres would be, e.g. port &lt;code&gt;5432&lt;/code&gt; or a socket file.&lt;/li&gt;
+&lt;li&gt;This has only been tested on Arch Linux&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This post is largely based on an old &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gist.github.com/dbanetto/eb7b941740af6e993f1cb1ddeb95beca&quot;&gt;gist&lt;/a&gt; I did a few years back, so take this as a &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.youtube.com/watch?v=szUJSXBjpJM&quot;&gt;dramatic reenactment&lt;/a&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+      </item>
+    </channel>
+</rss>

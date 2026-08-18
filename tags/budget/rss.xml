@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - budget</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/tags/budget/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Tue, 20 Oct 2020 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Budgeting your way to Admin?</title>
+          <pubDate>Tue, 20 Oct 2020 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/aws-budget-actions/</link>
+          <guid>https://blog.rnett.nz/posts/aws-budget-actions/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/aws-budget-actions/">&lt;h1 id=&quot;how-it-started&quot;&gt;How it started&lt;/h1&gt;
+&lt;p&gt;Today I noticed a new AWS feature, you know one of the hundreds, that piqued my interest: &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://aws.amazon.com/blogs/aws-cost-management/get-started-with-aws-budgets-actions/&quot;&gt;Budget Actions&lt;/a&gt; and the most interesting part to me is this section:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;AWS Budgets now allows you to configure actions [..] that will be applied [..] once a budget target has been exceeded.
+There are three action types: &lt;strong&gt;Identity and Access Management (IAM) policies, Service Control policies (SCPs)&lt;/strong&gt;, or target running instances (EC2 or RDS).&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Or in other words: if you are paying too much for AWS you can
+react automagically by slapping an IAM policy or service control policy onto a thing.&lt;/p&gt;
+&lt;h1 id=&quot;why-tho&quot;&gt;why tho?&lt;/h1&gt;
+&lt;p&gt;On my first read of it I thought:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This looks to be a new path to privilege escalation!&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;when-would-you-even-use-this&quot;&gt;When would you even use this?&lt;/h2&gt;
+&lt;p&gt;This lends itself to some cool use cases&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;stop exporting spendy logs by denying it access to the S3 bucket (That&#39;s what I&#39;ll be using it for)&lt;/li&gt;
+&lt;li&gt;big corporates might like to cut costs on training accounts with a
+&lt;code&gt;FinanceSayNo_DenyAll&lt;/code&gt; SCP if you get too spendy&lt;/li&gt;
+&lt;li&gt;got a spendy vendor hosting infrastructure in your account? Just stop their
+instances once they are over budget.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&quot;trying-it-out&quot;&gt;Trying it out&lt;/h1&gt;
+&lt;p&gt;So as anyone would with a free service, you click about for a while.&lt;/p&gt;
+&lt;p&gt;The interesting parts I found about budgets (&amp;amp; thus budget actions) is that you have them activate
+on not just cost but some service usage, like S3 or EC2 CPU credits, which is
+a super neat TIL.&lt;/p&gt;
+&lt;p&gt;At the end of my clicking I quickly got side tracked by the requirement of an
+IAM role to be use.&lt;/p&gt;
+&lt;h2 id=&quot;the-humble-default-policy&quot;&gt;The humble default policy&lt;/h2&gt;
+&lt;p&gt;I feel like AWS knows IAM is pretty annoying when it provides you some
+some defaults to copy &amp;amp; paste into a new role.&lt;/p&gt;
+&lt;p&gt;And here they are:&lt;/p&gt;
+&lt;h3 id=&quot;default-trust-policy&quot;&gt;Default trust policy&lt;/h3&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Version&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2012-10-17&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Statement&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: [&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Effect&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Allow&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Principal&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Service&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;budgets.amazonaws.com&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      },&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Action&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;sts:AssumeRole&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  ]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&quot;default-permissions-policy&quot;&gt;Default permissions policy&lt;/h3&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Version&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2012-10-17&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Statement&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: [&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Effect&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Allow&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Action&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: [&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;ec2:DescribeInstanceStatus&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;ec2:StartInstances&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;ec2:StopInstances&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;iam:AttachGroupPolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;iam:AttachRolePolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;iam:AttachUserPolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;iam:DetachGroupPolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;iam:DetachRolePolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;iam:DetachUserPolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;organizations:AttachPolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;organizations:DetachPolicy&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;rds:DescribeDBInstances&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;rds:StartDBInstance&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;rds:StopDBInstance&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;        &amp;quot;ssm:StartAutomationExecution&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      ],&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;      &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Resource&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;*&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  ]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&quot;thoughts-on-these-policy&quot;&gt;Thoughts on these policy&lt;/h3&gt;
+&lt;p&gt;The permissions are pretty broad &amp;amp; could cause a lot of damage on their own.
+Having the ability to attach policies to any of the three IAM principals is
+screaming to be misused with some managed policies.&lt;/p&gt;
+&lt;p&gt;This policy is generated in the Console UI, so would be cool for them to tailor
+the permissions to resources selected in the UI. Be a nice secure by default
+option &amp;amp; leave the full example in the doc pages.&lt;/p&gt;
+&lt;p&gt;The saving grace is the trust policy only allowing the &lt;code&gt;budgets&lt;/code&gt; service to use
+the role.&lt;/p&gt;
+&lt;p&gt;That&#39;s enough IAM nerd snipping, they have their reasons.&lt;/p&gt;
+&lt;h1 id=&quot;spy-vs-spy-time&quot;&gt;Spy vs. Spy time&lt;/h1&gt;
+&lt;p&gt;Like all good services in AWS that can mess with permissions, it might be good
+to do some &lt;em&gt;threat modelling&lt;/em&gt;.
+Now, for todays session will be pitting against Red (Attackers) &amp;amp; Blue (Defenders) teams.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;em&gt;(this is not just me typing with different coloured LED lighting, I swear)&lt;/em&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;setting-the-scene&quot;&gt;Setting the scene&lt;/h2&gt;
+&lt;p&gt;To set the scene for this cyber battle:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Someone read the aforementioned AWS blog post &amp;amp; decided to give it a go, using the provided default role policies it worked &amp;amp; then went along their day&lt;/li&gt;
+&lt;li&gt;The Red team in their wizardy ways have managed to get the AWS credentials
+of someone from Finance&#39;s Budgeting team that is reasonable scoped to the
+&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/glassechidna/trackiam/blob/master/policies/AWSBudgetsActionsWithAWSResourceControlAccess.json&quot;&gt;&lt;code&gt;AWSBudgetsActionsWithAWSResourceControlAccess&lt;/code&gt;&lt;/a&gt; policy.&lt;/li&gt;
+&lt;li&gt;The Blue team are returning from their team lunch.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The Red Team has a few goals it is going for:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Elevating their own privilege&lt;/li&gt;
+&lt;li&gt;Don&#39;t let any one stop their rampage&lt;/li&gt;
+&lt;li&gt;Taking down &lt;em&gt;the site&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The Blue team wants none of that, but sometimes the best you can do is to know
+something is about.&lt;/p&gt;
+&lt;h2 id=&quot;red-team-are-going-in-with-the-attack&quot;&gt;Red team: are going in with the attack&lt;/h2&gt;
+&lt;p&gt;With their newly acquired Budget Team permissions they find scope at what they
+can even do in the budget service. To their surprise they find this blog post
+telling them exactly how to abuse these permissions!&lt;/p&gt;
+&lt;p&gt;Fortunately the budget service has this great way to apply IAM policies to
+roles at events &amp;amp; SCPs to organization units (OU).&lt;/p&gt;
+&lt;h3 id=&quot;elevating-their-own-privilege&quot;&gt;Elevating their own privilege&lt;/h3&gt;
+&lt;p&gt;First things first, get more permissions. Red Team wants it &lt;strong&gt;ALL&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Someone want to try out this new priv-esc (what the kewl h@ck0rz call it) they
+saw using &lt;code&gt;budgets&lt;/code&gt;. So they:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Do the cloud &lt;code&gt;whoami&lt;/code&gt; with the less succinct  &lt;code&gt;aws sys get-caller-identity&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Take stock, enumerate what permissions you got (there are some cool scripts
+for this like &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/andresriancho/enumerate-iam&quot;&gt;andresriancho/enumerate-iam&lt;/a&gt;)
+&lt;ul&gt;
+&lt;li&gt;the team learns they can list few things like IAM roles &amp;amp; EC2
+&lt;ul&gt;
+&lt;li&gt;most importantly, listing IAM Roles includes trust policies&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;they also learn they got full access to &lt;code&gt;budgets&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;they also discover the role setup for budget actions &amp;amp; left unused for years&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Putting 1 and 1 together they came up with a plan of attack:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Make a new budget that notifies at 1 S3 API call&lt;/li&gt;
+&lt;li&gt;Add a budget action to add the &lt;code&gt;AdministratorAccess&lt;/code&gt; managed policy to their
+IAM principal&lt;/li&gt;
+&lt;li&gt;???&lt;/li&gt;
+&lt;li&gt;Profit&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Not long after laying the trap it springs &amp;amp; they now got access to everything!&lt;/p&gt;
+&lt;p&gt;They are now free to do it all &amp;amp; order the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://aws.amazon.com/snowmobile/&quot;&gt;Snowmobile&lt;/a&gt; they always wanted.&lt;/p&gt;
+&lt;h3 id=&quot;continuing-the-rampage&quot;&gt;Continuing the rampage&lt;/h3&gt;
+&lt;p&gt;At this point it is pretty game over, but just to keep going until the Blue
+Team notices &amp;amp; enjoying novelty of budget shinigans they keep going.&lt;/p&gt;
+&lt;p&gt;Next, on the list from the blog post: service control policies&lt;/p&gt;
+&lt;p&gt;So taking their previous knowledge, listing the SCPs in the account:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Make a new budget that notifies at 1 S3 API call&lt;/li&gt;
+&lt;li&gt;Add a budget action to add the &lt;code&gt;DenyAll&lt;/code&gt; SCP that just happened to all the OUs&lt;/li&gt;
+&lt;li&gt;???&lt;/li&gt;
+&lt;li&gt;No AWS services for anyone&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;It is worth noting that this will only work in the Organization root account&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&quot;take-down-the-site&quot;&gt;Take down the site&lt;/h3&gt;
+&lt;p&gt;I think there is starting to be a pattern here... but this time targeting EC2 &amp;amp;
+RDS instances.&lt;/p&gt;
+&lt;h3 id=&quot;bonus-some-things-i-didn-t-try-cause-it-takes-a-billing-cycle&quot;&gt;BONUS: Some things I didn&#39;t try cause it takes a billing cycle&lt;/h3&gt;
+&lt;p&gt;The docs say it may remove the policy that is added by the alert.&lt;/p&gt;
+&lt;p&gt;So what happens if you add a policy that was already added?!&lt;/p&gt;
+&lt;p&gt;For example, targeting the default SCP policy to allow all services. Will that just get removed
+at the start of the next billing cycle.
+I know from experience that if you remove that one out you just turn AWS control
+plane off killing any serverless apps.&lt;/p&gt;
+&lt;h2 id=&quot;blue-team-you-activated-my-trap-card&quot;&gt;Blue team: you activated my trap card!&lt;/h2&gt;
+&lt;p&gt;Since this service is behaving how it is suppose to &amp;amp; seems pretty legitimate it
+is a bit hard to spot as it is happening. So I wouldn&#39;t blame them to be
+surprised when the Snowmobile shows up.&lt;/p&gt;
+&lt;p&gt;I doubt they&#39;ll get caught with the same trick twice though, looking back there
+are some tells that tell a tall tale.&lt;/p&gt;
+&lt;h3 id=&quot;monitoring-alerts&quot;&gt;Monitoring &amp;amp; Alerts&lt;/h3&gt;
+&lt;p&gt;There are a few places the Blue team can put some monitors &amp;amp; alerts on:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;events relating to a human permissions&lt;/li&gt;
+&lt;li&gt;events for attaching some juicy managed policies, like &lt;code&gt;AdministratorAccess&lt;/code&gt; or
+&lt;code&gt;IAMFullAccess&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;if budget events are infrequently changed, any event related to their
+change&lt;/li&gt;
+&lt;li&gt;or if you have a CI/CD deploying the actions, monitor for actions not by the
+CI/CD&lt;/li&gt;
+&lt;li&gt;events for old roles suddenly coming back to life&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This is not an exhaustive list but some starting points.&lt;/p&gt;
+&lt;p&gt;Also worth pointing out these do not need to be paged on. No one likes
+noisy alerts, they&#39;re often worse than nothing. So be careful tuning alerts.&lt;/p&gt;
+&lt;h3 id=&quot;cleaning-up-old-iam-roles&quot;&gt;Cleaning up old IAM roles&lt;/h3&gt;
+&lt;p&gt;The previous role left was the keystone of the Red team&#39;s whole operation and
+it is the same story with like 90% of lateral movement maneuvers in AWS.&lt;/p&gt;
+&lt;p&gt;Cleaning up old unused IAM roles is really important, you never really know&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The other 10% is over permissive IAM policies to make your own roles to
+maneuver through.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;implicit-nice-parts&quot;&gt;Implicit nice parts&lt;/h2&gt;
+&lt;p&gt;By having to bring your own role (BYOR) for the service to use it does help mitigate
+most of the potential of a Red Team&#39;s fun with this new feature.&lt;/p&gt;
+&lt;h3 id=&quot;playing-by-your-own-rules&quot;&gt;Playing by your own rules&lt;/h3&gt;
+&lt;p&gt;First of all, your BYOR will be subject to your own SCPs in
+your account. So if you already got good guardrails in your SCPs that prevent
+silly things like attaching small managed policies like &lt;code&gt;AdministratorAccess&lt;/code&gt;
+to a role then you&#39;ll be fine. If not, that might be a thing to look into.&lt;/p&gt;
+&lt;h3 id=&quot;it-doesn-t-have-aws-organization-magic&quot;&gt;It doesn&#39;t have AWS Organization magic&lt;/h3&gt;
+&lt;p&gt;Currently there is no direct support from AWS Organization.
+Which limits the scope that these can be applied on but does mean repetition
+across a fleet of AWS accounts.&lt;/p&gt;
+&lt;p&gt;Though, on the plus side it also means you can&#39;t pull an
+Organization Cloudformation StackSet &amp;amp; make a service-linked role with
+&lt;code&gt;AdministratorAccess&lt;/code&gt; access all of the accounts with a click of a button
+(&lt;em&gt;that is always a good time&lt;/em&gt;).&lt;/p&gt;
+&lt;p&gt;If this ever does integrate with Organization, this feature will get added to the
+&quot;why billing account access is scary list&quot;.&lt;/p&gt;
+&lt;h3 id=&quot;blast-radius&quot;&gt;Blast radius&lt;/h3&gt;
+&lt;p&gt;If the breach is not in the Organization root account, the damage is limited to
+just that account. That&#39;s with the assumption that accounts in a Organization stay
+completed separated, which is pretty generous.&lt;/p&gt;
+&lt;h1 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;As with most things AWS, the devil is in the IAM policy and what IAM Roles that
+get left around.&lt;/p&gt;
+&lt;p&gt;There is nothing inherently wrong with this service or how it does about its
+merry day, it is just in conjunction with people using AWS it can lead to a bad
+time:tm:.&lt;/p&gt;
+&lt;h2 id=&quot;my-takeaways&quot;&gt;My Takeaways&lt;/h2&gt;
+&lt;p&gt;Some of my takeaways from writing this:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Unused IAM Roles can be dangerous: so clean up after yourself&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Monitoring helps&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Have guardrails around &lt;em&gt;juicy&lt;/em&gt; managed IAM policies, it may save you
+later on&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;New features in older services can lead to interesting paths to
+&lt;code&gt;AdministratorAccess&lt;/code&gt;, I would say read their announcement feeds but there
+is too much so see if anyone makes a blog about it&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+      </item>
+    </channel>
+</rss>

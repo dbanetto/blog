@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - networking</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/tags/networking/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sat, 11 Oct 2025 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Exposing rootless containers</title>
+          <pubDate>Sat, 11 Oct 2025 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/rootless-containers/</link>
+          <guid>https://blog.rnett.nz/posts/rootless-containers/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/rootless-containers/">&lt;h1 id=&quot;problem&quot;&gt;Problem&lt;/h1&gt;
+&lt;p&gt;This all started because I wanted to run some services on a VPS and expose them
+in an easy way. To do this I wanted them to be:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Easy to manage, with no overhead (a.k.a not using Kubernetes)&lt;/li&gt;
+&lt;li&gt;Secure enough for my small scale, using rootless containers&lt;/li&gt;
+&lt;li&gt;Stable enough to survive restarts &amp;amp; neglect&lt;/li&gt;
+&lt;li&gt;(Bonus) Dual-stack IPv4 &amp;amp; v6.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Throughout this post I&#39;ll have the running example of setting up &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://caddyserver.com/&quot;&gt;Caddy reverse-proxy&lt;/a&gt; and &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://freshrss.github.io/FreshRSS/&quot;&gt;FreshRSS&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&quot;managing-containers&quot;&gt;Managing containers&lt;/h1&gt;
+&lt;p&gt;Recently I had a home Kubernetes cluster for this type of thing but that proved to be a large amount
+of effort. So this time I&#39;m aiming for low-tech containerisation solutions like Podman!&lt;/p&gt;
+&lt;p&gt;I happened to come across &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html&quot;&gt;Podman Quadlet&lt;/a&gt;, which
+in short is a Systemd configuration layer on-top of Podman commands.
+It generates &lt;code&gt;.service&lt;/code&gt;&#39;s from &lt;code&gt;.container&lt;/code&gt;, &lt;code&gt;.network&lt;/code&gt; and &lt;code&gt;.volume&lt;/code&gt; and can understand the interlinks between them.&lt;/p&gt;
+&lt;p&gt;The development flow for them are basically:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Look at some &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://wiki.archlinux.org/title/Podman#Quadlet&quot;&gt;examples&lt;/a&gt; or the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html&quot;&gt;docs&lt;/a&gt; for a starting point.&lt;/li&gt;
+&lt;li&gt;Modify them to match a &lt;code&gt;docker-compose.yaml&lt;/code&gt; you&#39;ve found online&lt;/li&gt;
+&lt;li&gt;Put them in the right location, lets say &lt;code&gt;~/.config/containers/systemd&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Run &lt;code&gt;systemctl --user daemon-reload&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Run &lt;code&gt;systemctl --user start container.server&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Use &lt;code&gt;journalctl&lt;/code&gt; to figure what you did wrong &amp;amp; repeat.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id=&quot;setting-up-a-simple-service&quot;&gt;Setting up a simple service&lt;/h1&gt;
+&lt;p&gt;Will start this example with setting up FreshRSS. It only requires three things:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;A container to the service&lt;/li&gt;
+&lt;li&gt;A volume to store its data&lt;/li&gt;
+&lt;li&gt;A port to expose the service&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;For the container you can define it with Quadlet as:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# freshrss.container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Unit]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Description=Fresh RSS container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Container]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ContainerName=freshrss&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Image=index.docker.io/freshrss/freshrss:1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;AutoUpdate=registry # Auto-updating!&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Network=example.network # We&amp;#39;ll get to this soon&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;HostName=freshrss&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=freshrss-data.volume:/var/www/FreshRSS/data # &amp;lt;- Refrence to the volume&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=TZ=Etc/UTC&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=CRON_MIN=1,31&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=LISTEN=:8080&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Service]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Restart=on-failure&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# Extend Timeout to allow time to pull the image&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;TimeoutStartSec=300&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Install]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;WantedBy=default.target&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For the volume, as we are not defining any option it can just be an empty file:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# freshrss-data.volume&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;One of the neat parts of this are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;No &lt;strong&gt;YAML&lt;/strong&gt;! 🎉&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;AutoUpdate=registry&lt;/code&gt;, I get automatic updates from a built-in timer! Now it will update the &lt;code&gt;:1&lt;/code&gt;-label to be the latest version daily.&lt;/li&gt;
+&lt;li&gt;The &lt;code&gt;.container&lt;/code&gt; file references the &lt;code&gt;.volume&lt;/code&gt; and it just works!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You&#39;ll note that we hadn&#39;t actually exposed a port here.
+Which is correct, the container is in a podman network named &lt;code&gt;example.network&lt;/code&gt;.&lt;/p&gt;
+&lt;h1 id=&quot;getting-a-bit-more-complicated-with-caddy&quot;&gt;Getting a bit more complicated with Caddy&lt;/h1&gt;
+&lt;p&gt;With &lt;code&gt;podman&lt;/code&gt; one of the first things you want to setup is a Network, cause the default network does not have DNS resolution
+for other containers.&lt;/p&gt;
+&lt;p&gt;You can create a network via Quadlet with:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# example.network&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Network]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;IPv6=true # &amp;lt;- This makes it a Dualstack network&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Internal=false # &amp;lt;- Allows the network to publish ports to the host&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To define the &lt;code&gt;Caddy&lt;/code&gt; container:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# caddy.container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Unit]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Description=Caddy Reverse Proxy container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Container]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ContainerName=caddy&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Image=caddy.build # &amp;lt;- Links to a locally built image&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Network=example.network # &amp;lt;- Links to our network&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=caddy-config.volume:/config # &amp;lt;- Links volumes&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=caddy-data.volume:/data # &amp;lt;- Links volumes&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Volume=caddy-etc.volume:/etc/caddy # &amp;lt;- Links volumes&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Secret=caddy-cf-api,type=env,target=CF_API_TOKEN # &amp;lt;- Links secrets&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Environment=DOMAIN=example.com&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;HostName=caddy&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;PublishPort=8080:80/tcp&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;PublishPort=8443:443/tcp&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;PublishPort=8443:443/udp&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Service]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Restart=on-failure&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# Extend Timeout to allow time to build the image&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;TimeoutStartSec=900&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Install]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;WantedBy=default.target&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: all of the &lt;code&gt;*.volume&lt;/code&gt; files are just empty files -- I mean, an exercise left to the reader.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;You will note a couple different things to the FreshRSS file, here we have:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The image is referencing a &lt;code&gt;.build&lt;/code&gt; file&lt;/li&gt;
+&lt;li&gt;Reading a &lt;code&gt;podman secret&lt;/code&gt; and injecting it as a environment variable&lt;/li&gt;
+&lt;li&gt;Publishing ports&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&quot;making-quadlet-build-container-image-for-you&quot;&gt;Making Quadlet build container image for you&lt;/h3&gt;
+&lt;p&gt;For the &lt;code&gt;caddy.build&lt;/code&gt; are instructing Quadlet to schedule a &lt;code&gt;systemd&lt;/code&gt; job to build our image.
+Which is super handy with Caddy where extra features like using Cloudflare for Lets Encrypt&#39;s DNS ACME challenge
+requires an addon.&lt;/p&gt;
+&lt;p&gt;You can do with this with&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;# caddy.build&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Unit]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Description=Building the caddy container&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Requires=network-online.target&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Build]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;File=/home/usr/caddy.Containerfile&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ImageTag=localhost/caddy-cf-dns&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Pull=newer&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;SetWorkingDirectory=unit&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then having a Containerfile like so:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;docker&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;font-style: italic;&quot;&gt;# caddy.Containerfile&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;ARG&lt;/span&gt;&lt;span&gt; CADDY_VERSION=2.9.1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;FROM&lt;/span&gt;&lt;span&gt; docker.io/library/caddy:${CADDY_VERSION}-builder-alpine &lt;/span&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;AS&lt;/span&gt;&lt;span&gt; builder&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;font-style: italic;&quot;&gt;# Pinned dependencies to handle the change of libdns v1.0 APIs&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;RUN&lt;/span&gt;&lt;span&gt; xcaddy build &lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;${CADDY_VERSION}&amp;quot;&lt;/span&gt;&lt;span&gt; \&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    --with github.com/caddyserver/certmagic@b9399eadfbe7ac3092f4e65d45284b3aabe514f8 \&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    --with github.com/caddy-dns/cloudflare@bbf79111721a977fbd13dfe1f5b7aacaf7871a75&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;FROM&lt;/span&gt;&lt;span&gt; docker.io/library/caddy:${CADDY_VERSION}-alpine&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #CBA6F7;&quot;&gt;COPY&lt;/span&gt;&lt;span&gt; --from=builder /usr/bin/caddy /usr/bin/caddy&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: I&#39;ve had some issues with this due to &lt;code&gt;systemd&lt;/code&gt; running this job before
+the internet connectivity is up.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&quot;sssh-keep-this-secret&quot;&gt;Sssh, keep this secret&lt;/h3&gt;
+&lt;p&gt;Using &lt;code&gt;podman secret&lt;/code&gt;&#39;s with Quadlet is quite simple.
+You just need to make them by hand, like so:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #F38BA8;font-style: italic;&quot;&gt;printf&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;secretdata&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt; |&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt; podman&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; secret create caddy-cf-api -&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h1 id=&quot;getting-access&quot;&gt;Getting access&lt;/h1&gt;
+&lt;p&gt;So far we&#39;ve got Caddy and FreshRSS running as Rootless containers, so they cannot bind to any
+privileged port like &lt;code&gt;:80&lt;/code&gt; or &lt;code&gt;:443&lt;/code&gt;. So we need to figure out how to talk to them on those
+port so we can have a good UX.&lt;/p&gt;
+&lt;p&gt;This could either solve this at the router with some port-mapping, or we could do that on the host
+with &lt;code&gt;iptables&lt;/code&gt;!&lt;/p&gt;
+&lt;p&gt;Setting these up by hand are a bit annoying so I&#39;ll be using Ansible here (sorry for the yaml):&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;-&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; name&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; Allow Ingress&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  ansible.builtin.iptables&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    table&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; filter&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    chain&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; INPUT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    protocol&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.proto }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    ip_version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.version }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    destination_port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.port }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    action&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; insert&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    jump&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; ACCEPT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  loop&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;font-style: italic;&quot;&gt;    # External&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;-&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; name&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; Port Forwarding&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  ansible.builtin.iptables&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    table&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; nat&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    chain&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; OUTPUT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    out_interface&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; lo&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    protocol&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.proto }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    match&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.proto }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    ip_version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.version }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    destination_port&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.from }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    jump&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; REDIRECT&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    to_ports&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;{{ item.to }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;    comment&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Redirect web traffic to Caddy port {{ item.from }}=&amp;gt;{{ item.to }}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;  loop&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8080&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 80&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8080&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;tcp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv4&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    - {&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;from&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; to&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; 8443&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; version&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;ipv6&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt; proto&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;#39;udp&amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note: Saving the &lt;code&gt;iptable&lt;/code&gt; changes is an exercise left to the reader. I&#39;m too embarrassed by how I do it to post it.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;With these two blocks the host is setup with an ingress path on the privileged ports and
+are redirected to the unprivileged ports used by the rootless &lt;code&gt;Caddy&lt;/code&gt;!&lt;/p&gt;
+&lt;h1 id=&quot;problem-re-cap&quot;&gt;Problem re-cap&lt;/h1&gt;
+&lt;p&gt;So to re-cap what just happened here:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Easy to manage, with no overhead (a.k.a not using Kubernetes)
+&lt;ul&gt;
+&lt;li&gt;Quadlet makes use of systemd to manage your containers for you&lt;/li&gt;
+&lt;li&gt;It does most of the supporting work too: volumes, networks, image builds, and referencing secrets!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Secure enough for my small scale, using rootless containers
+&lt;ul&gt;
+&lt;li&gt;Rootless with Quadlet + Podman is an easy as &lt;code&gt;systemctl --user start&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Stable enough to survive restarts &amp;amp; neglect
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;systemd&lt;/code&gt; handles all my restart woes&lt;/li&gt;
+&lt;li&gt;Podman&#39;s &lt;code&gt;AutoUpdate=registry&lt;/code&gt; ensure my images are up to date&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;(Bonus) Dual-stack IPv4 &amp;amp; v6.
+&lt;ul&gt;
+&lt;li&gt;It was just a flag in the &lt;code&gt;.network&lt;/code&gt;, how easy.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Overall, this has been a setup &amp;amp; forget situation.
+The only time I have had an issue is when the container builds broke
+due dependencies moving between major version of &lt;code&gt;libdns&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;I&#39;d give it a 4/5, good for home-scale 👍&lt;/p&gt;
+</description>
+      </item>
+    </channel>
+</rss>

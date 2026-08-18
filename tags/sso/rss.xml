@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - sso</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/tags/sso/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sun, 11 Apr 2021 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>AWS SSO Deeeep Dive</title>
+          <pubDate>Sun, 11 Apr 2021 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/aws-sso-deep-dive/</link>
+          <guid>https://blog.rnett.nz/posts/aws-sso-deep-dive/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/aws-sso-deep-dive/">&lt;!--
+ What to cover:
+  - intro to AWS SSO
+  - What the cli experience is like
+  - What APIs are happening
+--&gt;
+&lt;h1 id=&quot;what-is-even-sso&quot;&gt;What is even SSO?!&lt;/h1&gt;
+&lt;p&gt;SSO is the fancy TLA for &lt;strong&gt;S&lt;/strong&gt;ingle &lt;strong&gt;S&lt;/strong&gt;ign &lt;strong&gt;O&lt;/strong&gt;n, which is the great of idea
+of having just having to login into one place &amp;amp; then authenticate into other
+services when you want to. Some kind people have put great effort into the
+&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://en.wikipedia.org/wiki/Single_sign-on&quot;&gt;Wikipeia&lt;/a&gt; page for it,
+recommended to get more familiar with the idea.&lt;/p&gt;
+&lt;p&gt;Generally it is a very &lt;em&gt;Enterprise Plan&lt;/em&gt; feature so us mere
+mortals that cannot pay the usual USD$50/user/month (minimum 50 users) don&#39;t get to see it much.
+Of course with the exception of the &quot;Social&quot; logins (&quot;Sign in with Facebook/Google&quot;)
+and AWS that provides it FOR FREE.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: that none of these companies named sponsored this post&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;the-lab-setup&quot;&gt;The &quot;&lt;em&gt;Lab&lt;/em&gt;&quot; Setup&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Developer account for &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://developer.okta.com/&quot;&gt;Okta&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Free tier &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://aws.amazon.com/&quot;&gt;AWS Account&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Use &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html&quot;&gt;AWS CLI v2&lt;/a&gt;, SSO support is only in V2+&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Setting up basic use of &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/singlesignon/latest/userguide/okta-idp.html&quot;&gt;Okta as the &lt;strong&gt;Id&lt;/strong&gt;entity &lt;strong&gt;P&lt;/strong&gt;rovider (IdP)&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;I will not be going through how to setup this &quot;&lt;em&gt;lab&lt;/em&gt;&quot;, AWS &amp;amp; Okta have some
+&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/singlesignon/latest/userguide/okta-idp.html&quot;&gt;nice docs&lt;/a&gt; on how to&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;To start, the native way of getting credentials for a session are the following:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;aws sso login &amp;lt;profile_name&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And from there lets see what has done.&lt;/p&gt;
+&lt;h2 id=&quot;what-has-that-done&quot;&gt;What has that done?&lt;/h2&gt;
+&lt;p&gt;There is some new mess in your &lt;code&gt;~/.aws&lt;/code&gt; folder.&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&amp;gt; find ~/.aws -exec file {} \;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/config: ASCII text&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/cli: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/cli/cache: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/cli/cache/0000000000000000000000000000000000000000.json: JSON data&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso/cache: directory&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso/cache/botocore-client-id-ap-southeast-9.json: JSON data&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;~/.aws/sso/cache/1111111111111111111111111111111111111111.json: JSON data&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And in the &lt;code&gt;~/.aws/config&lt;/code&gt; there is now a profile&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[profile RoleAccess-000000000000]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_start_url = https://d-0000000000.awsapps.com/start#/&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_region = ap-southeast-9&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_account_id = 000000000000&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;sso_role_name = RoleAccess&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&quot;cache-files&quot;&gt;Cache files?!&lt;/h3&gt;
+&lt;p&gt;Those cache files are new and interesting. So what are in those?&lt;/p&gt;
+&lt;h4 id=&quot;cli-cache&quot;&gt;CLI cache&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;~/.aws/cli/cache/0000000000000000000000000000000000000000.json&lt;/code&gt;&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;ProviderType&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;sso&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Credentials&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;AccessKeyId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ASIA0000000000000000&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;SecretAccessKey&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot; -- classic secret access key high entropy stuff here --&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;SessionToken&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot; -- big old session token --&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;Expiration&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2021-02-11T09:12:40Z&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Taking these credentials out they actually work.&lt;/p&gt;
+&lt;p&gt;So this looks like how AWS CLI v2 handles your SSO sessions and just keeps them
+to the side for you.&lt;/p&gt;
+&lt;p&gt;The file name looks to be a hash so guessing the name is pretty hard for a file
+inclusion attack unlike the ye &#39;old &lt;code&gt;~/.aws/credentials&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Though these look to be stable hashes per profile.&lt;/p&gt;
+&lt;h4 id=&quot;sso-file&quot;&gt;SSO File&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;~/.aws/sso/cache/1111111111111111111111111111111111111111.json&lt;/code&gt;&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;startUrl&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;https://d-0000000000.awsapps.com/start#/&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;region&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ap-southeast-9&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;accessToken&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;eyJlbmMiOiJBMjU2R0NNIiwidGFnIjoiSm5udXRHU0tKTVVTb1RqRyIsImFsZyI6IkEyNTZHQ01LVyIsIml2IjoiazNiZXlaeEtDR0otc05VQyJ9.AYABeObaD6db3xtlf2VyQV4uZbcAHwABABBEYXRhUGxhbmVTZXNzaW9uAAlQZXJlZ3JpbmUAAQAHYXdzLWttcwBQYXJuOmF3czprbXM6YXAtc291dGhlYXN0LTI6NDEyMjAxMDI1ODU4OmtleS9kMTEwZTQ1ZC1mMGVhLTQ4NTYtYmFjNS0xMmMyYTMxM2Q2YWEAuAECAQB4Pcqs65qFZyXWdyHZA9hnHzXOhvyEOzDstw3xH4zNak0BY6qRWzxkq86qEu6rfKsXwQAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDLXUMJLzS47DezlQSAIBEIA7lHcufjSiF9_gCd_IcRwk9NoCCnr9JmXvmWygjueAsEigiiXZ3WUF-K64_lSWTdaT9dC8rGDIh2-nEjoCAAAAAAwAABAAAAAAAAAAAAAAAAAAAFNQZGeo3pZnmaTvFFpgff____8AAAABAAAAAAAAAAAAAAABAAAAIAoOunYoPR2JIAc65uLD1QkKwC7dH1NzyRkba108s0-XEVJFBRIH1bPqAUpp7NaJyg.dzmoGCWoLlq-x4GZ.IHhQ2ffvTLAQQfffWXu9QvnEg1dir26R1HZ5gcNX1QcScFq15-AE_9ylR9djZyTv2qCk3xHRdx26oGhhK50m6DbryV2wy1OsEL_UpbAdt4x18upnSJsQXEcnug9mEbdP8P-XtXCzhCMT2yCahatqvsifKagyInM2vQATNZRc87r2pM4qy_z4h3rmzBpvXw6_lQ5AN7gZXN1urAGELHGanrHzkCX80msZskK1_RFIQbO0HADjfTnEeK1UmNXaXpFbq2oMI-NHIbkGsf8_XhY3AFX-EZfqS_MmgPAQAJ-fTF4P8vlJ4-UHQTX3onws_v3LWoqGA8Tlf-Vrf76mqUqN-ZUtnsUeP-0NVy2dDZu3z54xghta40Dbly9QVItaGzB9oSXJKn-NwiBdKxm6F0BhC9TShFghZ-k9P0JFCuHvl7lKlETTSH1tnQXlRvTlAwN7hagZWMqw91fZgg9v_Ujc6w.zj3d2TiDLW7ajD5NVf6P0A&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;expiresAt&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2021-02-11T16:12:30Z&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Hmm a string starting with &lt;code&gt;ey&lt;/code&gt;?! Is this a JWT?!&lt;/p&gt;
+&lt;p&gt;Header contains the following.&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;enc&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;A256GCM&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;tag&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;JnnutGSKJMUSoTjG&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;alg&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;A256GCMKW&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;  &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;iv&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;k3beyZxKCGJ-sNUC&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;There is a few crypto stuff that has gone over my head, but from searching for
+the algorithm (under &lt;code&gt;alg&lt;/code&gt; key) &lt;code&gt;A256GCMKW&lt;/code&gt; found a &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://stackoverflow.com/questions/38122521/what-is-the-algorithm-string-for-agcm256-kw-in-java-cryptography-to-be-used-i&quot;&gt;helpful StackOverflow
+thread&lt;/a&gt;.
+The key points I got from it are&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;AES256&lt;/code&gt; encryption algorithm used with the following options,&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;GCM&lt;/code&gt; - to detonate it is in &lt;code&gt;GCM&lt;/code&gt; mode&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;KW&lt;/code&gt; - to detonate that key wrapping is used&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Does this help much? Not really.&lt;/p&gt;
+&lt;p&gt;Now for the body (decoded by the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gchq.github.io/CyberChef/&quot;&gt;CyberChef themselves&lt;/a&gt;)&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;...xæÚ.§[ß.e.erA^.e·......DataPlaneSession.	Peregrine....aws-kms.Parn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa.¸....x=Ê¬ë..g%Öw!Ù.Øg.5Î.ü.;0ì·&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ñ..ÍjM.cª.[&amp;lt;d«Îª.î«|«.Á...~0|.	*.H.÷&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;... o0m...0h.	*.H.÷&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;...0..	`.H.e....0...µÔ0.óK.Ã{9PH....;.w.~4¢.Ø.t..ÂOM  §¯Òf^ù.Ê.îx....¢].ÖPRºâT.MÖ.õÐ¼¬`È.iÄ.........................Ô..ê7¥.æi;Å....À...@...........@.....®...GbH.Î¹¸°õBB°.·GÔÜòFFÚ×O,Ñq.$PQ }[&amp;gt; .¦.Íh. w9¨.%¨.Z±àfH..6}ûÓ,..}÷Ö^ïP¾q ÕØ«Û¤u..`pÕõAÄ...y.Or..]...¿j..|GEÜvê.¡.®t. Û¯%vÃ-N°BÔ¥°.·.uòêgH..\G&amp;#39;º.f.·Oðõí\,á.ÄöÈ&amp;amp;¡jÚ¯²&amp;#39;Êj...Í¯@.Íe.&amp;lt;î½©3.²Ï.w®lÁ¦õðêT9.Þàesuº°..±ÆjzÇÎ@.óI¬fÉ&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;Õ.HA³´..ã}9Äx.T.ÕÚ^.[«j. ÑÈnA¬.Åácp.\F_©#&amp;amp;.ð...Ó..ü¾RxPt._z&amp;#39;ÂË÷-j*....õk.¾¦©J.eKg±G.ÐÕrÙÐÙ»|ùã.!µ®4&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;¹rõ.Hµ¡³.Ú.\.§7..t¬fè]../SJ.`..=?BE&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;áï.¹J.DÓH}m..åFôå..{.¨.XÊ°÷WÙ..oR7:Ä&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Um... wat?! This looks very cyber encrypted but also is that a ARN in there?
+And what is this &lt;code&gt;DataPlaneSession&lt;/code&gt;?!&lt;/p&gt;
+&lt;p&gt;That KMS key id &lt;code&gt;arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;/code&gt; is a bit strange.
+The account id is not one of &lt;em&gt;mine&lt;/em&gt;, so it must be an AWS managed account. So
+lets try some basic KMS operations on the key to see if there is a permissive
+key policy.&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;shellscript&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; aws kms describe-key --region ap-southeast-2 --key-id arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;An&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; error occurred&lt;/span&gt;&lt;span&gt; (AccessDeniedException) when calling the DescribeKey operation:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; aws kms encrypt --region ap-southeast-2 --key-id arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa --plaintext &lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;$(&lt;/span&gt;&lt;span style=&quot;color: #F38BA8;font-style: italic;&quot;&gt;echo&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; lol&lt;/span&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt; |&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt; base64&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; -&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;An&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; error occurred&lt;/span&gt;&lt;span&gt; (AccessDeniedException) when calling the Encrypt operation:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #94E2D5;&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; aws kms decrypt --region ap-southeast-2 --key-id arn:aws:kms:ap-southeast-2:412201025858:key/d110e45d-f0ea-4856-bac5-12c2a313d6aa --ciphertext-blob &lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;$(&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;base64&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; jwt_body&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #89B4FA;font-style: italic;&quot;&gt;An&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; error occurred&lt;/span&gt;&lt;span&gt; (InvalidCiphertextException) when calling the Decrypt operation:&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Ok, so that is mostly a no from what I know about KMS keys. Though that &lt;code&gt;InvalidCiphertextException&lt;/code&gt; might be an &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://en.wikipedia.org/wiki/Oracle_attack&quot;&gt;oracle vector&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I do wonder if it is the same KMS key for everyone that has deployed their SSO
+into that region or if it is per customer.&lt;/p&gt;
+&lt;p&gt;The former might allow a path for token reuse between SSO instances, while the
+latter would mean a $1/month/per customer instance fee for the SSO team that they
+are kindly not passing onto the customer (please thank your local SSO team
+member today).&lt;/p&gt;
+&lt;p&gt;If I ever get around to make more SSO instances I&#39;ll update this post with
+those findings.&lt;/p&gt;
+&lt;h4 id=&quot;signature-section&quot;&gt;Signature section&lt;/h4&gt;
+&lt;p&gt;There isn&#39;t really anything we can get from this section as the algorithm is
+symmetric (AES) so we are not gonna get anything from it.&lt;/p&gt;
+&lt;h3 id=&quot;access-token&quot;&gt;Access Token&lt;/h3&gt;
+&lt;p&gt;Jumping back a bit, but that &lt;code&gt;accessToken&lt;/code&gt; in &lt;code&gt;~/.aws/sso/cache/1111111111111111111111111111111111111111.json&lt;/code&gt; file is really interesting.
+It is used with the AWS SSO API to vend out access keys into accounts.&lt;/p&gt;
+&lt;p&gt;It is essentially a replacement for your login credentials to your IdP, MFA and
+all but with a time boxed existence.
+From this token you can iterate all your accounts you have access to, the
+roles in each of those accounts and then generate access keys for them.&lt;/p&gt;
+&lt;p&gt;The flow goes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccounts&lt;/code&gt; - takes the access token. Returns a list of accounts that
+the token can access&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sso:ListAccountRoles&lt;/code&gt; - takes the access token, and account id. Returns a
+list of roles the token can use in said account&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sso:GetRoleCredentials&lt;/code&gt; - takes the access token, account id and role name.
+Returns working access keys for the role in said account.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;For details about these actions have a look at the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sso.html&quot;&gt;Boto3 docs for SSO service&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;These actions are recorded in CloudTrail. To be honest I am surprised as these
+are at all since they are using Access Tokens instead of &lt;code&gt;STS&lt;/code&gt; access keys.&lt;/p&gt;
+&lt;p&gt;Here is an example event:&lt;/p&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;json&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventVersion&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;1.08&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;userIdentity&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;type&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Unknown&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;principalId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;aaaaaaaaaa-bbbbbbbb-cccc-dddd-eeee-ffffffffffff&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;accountId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;000000000000&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;userName&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;user@example.com&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    },&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventTime&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;2021-03-28T00:26:05Z&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventSource&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;sso.amazonaws.com&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventName&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ListAccountRoles&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;awsRegion&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;ap-southeast-2&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;sourceIPAddress&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;8.8.8.8&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;userAgent&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Boto3/1.17.5 Python/3.9.2 Linux/5 Botocore/1.20.5&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;requestParameters&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; null&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;responseElements&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; null&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;requestID&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;7e0ffa90-e6cc-497a-982e-42ef7db5b415&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventID&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;b02878f9-a936-4027-9338-16fdba509113&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;readOnly&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventType&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;AwsServiceEvent&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;managementEvent&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #FAB387;&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;eventCategory&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;Management&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;recipientAccountId&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;000000000000&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;serviceEventDetails&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;: {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;        &amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #89B4FA;&quot;&gt;account_id&lt;/span&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;&amp;quot;:&lt;/span&gt;&lt;span style=&quot;color: #A6E3A1;&quot;&gt; &amp;quot;000000000000&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span style=&quot;color: #9399B2;&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h1 id=&quot;self-plug&quot;&gt;Self-plug&lt;/h1&gt;
+&lt;p&gt;From working with SSO I hobbled together a couple of scripts to automate the
+setup of some of the annoying parts of AWS SSO, namely &lt;code&gt;aws sso login&lt;/code&gt;
+ssuucckks.&lt;/p&gt;
+&lt;p&gt;You get shoved to a browser every time when you got perfectly good cached
+credentials on disk! So these scripts &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/drbarnz/aws-sso-tools&quot;&gt;drbarnz/aws-sso-tools&lt;/a&gt;
+handle most of the time when you have to use that command.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Initial login&lt;/li&gt;
+&lt;li&gt;Switching profiles (account/role)&lt;/li&gt;
+&lt;li&gt;Generating profiles in &lt;code&gt;~/.aws/config&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&quot;take-aways&quot;&gt;Take Aways&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;SSO is cool if you want short lived credentials locally available&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;~/.aws/credentials&lt;/code&gt; are out &lt;code&gt;~/.aws/cli/${HASH}.json&lt;/code&gt; are in for access
+keys&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;~/.aws/sso/cache/${HAS}.json&lt;/code&gt;&#39;s &lt;code&gt;accessToken&lt;/code&gt; is same as login credentials
+but time boxed&lt;/li&gt;
+&lt;li&gt;SSO sessions do not make a mess of environment variables&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;extra-reading&quot;&gt;Extra Reading&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://docs.aws.amazon.com/singlesignon/latest/userguide/understanding-key-concepts.html&quot;&gt;AWS SSO&#39;s docs on SSO&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sso.html&quot;&gt;Boto3 docs for SSO service&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://github.com/drbarnz/aws-sso-tools&quot;&gt;AWS SSO tooling&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+      </item>
+    </channel>
+</rss>

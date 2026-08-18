@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+      <title>Title can be filled in later - linux</title>
+      <link>https://blog.rnett.nz</link>
+      <description></description>
+      <generator>Zola</generator>
+      <language>en</language>
+      <atom:link href="https://blog.rnett.nz/tags/linux/rss.xml" rel="self" type="application/rss+xml"/>
+      <lastBuildDate>Sat, 26 Sep 2020 00:00:00 +0000</lastBuildDate>
+      <item>
+          <title>Lazy Postgres</title>
+          <pubDate>Mon, 23 Apr 2018 00:00:00 +0000</pubDate>
+          <author>Unknown</author>
+          <link>https://blog.rnett.nz/posts/lazy-postgres/</link>
+          <guid>https://blog.rnett.nz/posts/lazy-postgres/</guid>
+          <description xml:base="https://blog.rnett.nz/posts/lazy-postgres/">&lt;h2 id=&quot;background&quot;&gt;Background&lt;/h2&gt;
+&lt;p&gt;Sometimes I want to have local services for some development work outside of a
+container but I don&#39;t want to run them if I&#39;m not using them.&lt;/p&gt;
+&lt;p&gt;After using &lt;code&gt;systemd&lt;/code&gt; for a while I got curious about the &lt;code&gt;.socket&lt;/code&gt; services. I
+knew that they could lazily start services when they are needed but not really
+sure what supported them.&lt;/p&gt;
+&lt;p&gt;So reading the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.freedesktop.org/software/systemd/man/systemd.socket.html&quot;&gt;documentation&lt;/a&gt; is a bit like drawing the &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.reddit.com/r/restofthefuckingowl/&quot;&gt;rest of the owl&lt;/a&gt;. It kinda tells you exactly what it is but not much in a way of what it lets you do.&lt;/p&gt;
+&lt;p&gt;I still don&#39;t get exactly what is going on but my mental model for it all is:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;the &lt;code&gt;*.socket&lt;/code&gt; system service will occupy the socket file or network port
+you want to listen to&lt;/li&gt;
+&lt;li&gt;upon some initial connection &lt;code&gt;systemd&lt;/code&gt; will start the prescribed service&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;???&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;profit&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The documentation does elude to a initial connection hand over to the service
+that has started for that &lt;em&gt;✨smooth transition✨&lt;/em&gt; but I have never been able to get to
+work.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;The recipe to success:&lt;/p&gt;
+&lt;h2 id=&quot;install&quot;&gt;Install&lt;/h2&gt;
+&lt;p&gt;The pre-requisites are having &lt;code&gt;postgresql&lt;/code&gt; and &lt;code&gt;systemd&lt;/code&gt; installed.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;create &lt;code&gt;postgresql.socket&lt;/code&gt; into &lt;code&gt;/usr/lib/systemd/system&lt;/code&gt; with the content
+below&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre class=&quot;giallo&quot; style=&quot;color: #CDD6F4; background-color: #1E1E2E;&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Socket]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;ListenStream=/run/postgresql/.s.PGSQL.5432&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;[Install]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;WantedBy=sockets.target&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl enable postgresql.socket&lt;/code&gt; to enable the socket service&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Optional&lt;/em&gt; run &lt;code&gt;sudo systemctl start postgresql.socket&lt;/code&gt; to start listening
+now &amp;amp; try it out yourself&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;uninstall&quot;&gt;Uninstall&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl disable postgresql.socket&lt;/code&gt; to disable the socket service&lt;/li&gt;
+&lt;li&gt;run &lt;code&gt;sudo systemctl stop postgresql.socket&lt;/code&gt; to stop the listening socket&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;cavets&quot;&gt;Cavets&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;slow 1st time usage, may even fail 1st connection attempt&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;ListenStream&lt;/code&gt; needs to point to where postgres would be, e.g. port &lt;code&gt;5432&lt;/code&gt; or a socket file.&lt;/li&gt;
+&lt;li&gt;This has only been tested on Arch Linux&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This post is largely based on an old &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://gist.github.com/dbanetto/eb7b941740af6e993f1cb1ddeb95beca&quot;&gt;gist&lt;/a&gt; I did a few years back, so take this as a &lt;a rel=&quot;noopener nofollow noreferrer external&quot; target=&quot;_blank&quot; href=&quot;https://www.youtube.com/watch?v=szUJSXBjpJM&quot;&gt;dramatic reenactment&lt;/a&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+      </item>
+    </channel>
+</rss>

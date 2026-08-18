@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+	<meta name='theme-color' content='#ffffff'>
+	<meta name='msapplication-TileColor' content='#da532c'>
+	<link rel='manifest' href='/icons/site.webmanifest'>
+	<link rel='mask-icon' href='/icons/safari-pinned-tab.svg' color='#5bbad5' />
+	<link rel='icon' type='image/png' sizes='16x16' href='/icons/favicon-16x16.png' />
+	<link rel='icon' type='image/png' sizes='32x32' href='/icons/favicon-32x32.png' />
+	<link rel='apple-touch-icon' sizes='180x180' href='/icons/apple-touch-icon.png' />
+
+	<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css' />
+	<link rel="stylesheet"
+		href="https://cdnjs.cloudflare.com/ajax/libs/galleria/1.6.1/themes/twelve/galleria.twelve.min.css" />
+    
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://blog.rnett.nz/rss.xml">
+    
+
+	<link rel='stylesheet' href='https://blog.rnett.nz/site.css' />
+
+	
+	
+
+	<title>Title can be filled in later | Exposing rootless containers</title>
+</head>
+
+<body class='site'>
+	
+	<nav class='navbar is-light' role='navigation' aria-label='main navigation'>
+		<div class='container'>
+			<div class='navbar-brand'>
+				<a class='navbar-item has-text-weight-bold' href='/'>Title can be filled in later</a>
+				<a role='button' class='navbar-burger burger' aria-label='menu' aria-expanded='false'
+					data-target='navMenu'>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+					<span aria-hidden='true'></span>
+				</a>
+			</div>
+
+			<div id='navMenu' class='navbar-menu'>
+				<div class='navbar-end'>
+					
+					<a href='https://blog.rnett.nz/' class='navbar-item'>
+						Home
+					</a>
+					
+					<a href='https://blog.rnett.nz/posts' class='navbar-item'>
+						Posts
+					</a>
+					
+					<a href='https://blog.rnett.nz/tags' class='navbar-item'>
+						Tags
+					</a>
+					
+					<a href='https://blog.rnett.nz/categories' class='navbar-item'>
+						Categories
+					</a>
+					
+					<div class='navbar-item'>
+						<div class='field has-addons'>
+							<div class='control'>
+								<input id='nav-search' class='input is-small' type='search' placeholder='Search'
+									data-target="#search-modal">
+							</div>
+							<div class='control'>
+								<a class='button is-small'>🔎</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</nav>
+	
+
+	<div id="search-modal" class="modal">
+		<div class="modal-background"></div>
+		<div class="modal-content">
+			<div class='field'>
+				<p class='control has-icons-right'>
+					<input id='search' class='input' type='search' placeholder='Search this website.'>
+					<span class='icon is-small is-right'>🔎</span>
+				</p>
+			</div>
+			<div class='search-results'>
+				<div class='search-results__items'>
+				</div>
+			</div>
+		</div>
+		<button class="modal-close is-large" aria-label="close"></button>
+	</div>
+
+	
+	
+
+	
+<main class='section'>
+	<div class='container'>
+		<div class='columns'>
+			<div class='column is-10 is-offset-1'>
+				<article>
+					<h1 class='title'>Exposing rootless containers</h1>
+					<h2 class='subtitle'>Using Podman, Quadlet and iptables to expose services</h2>
+					<div class='columns mb-0'>
+						<div class='column'>
+                            
+<p class='has-text-grey'>
+	Published on <time datetime='2025-10-11'>2025-10-11</time>
+</p>
+
+						</div>
+						<div class='column has-text-right-desktop'>
+                            
+<p class='has-text-grey'>
+	🕰️ 4 min, 857 words
+</p>
+
+						</div>
+					</div>
+
+					<div class='columns mb-0'>
+						<div class='column'>
+							
+                            
+<p>
+	<span class="has-text-black has-text-weight-normal">Categories:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/categories/tech/'>
+		tech
+	</a>
+	
+</p>
+
+							
+						</div>
+						<div class='column has-text-right-desktop'>
+							
+                            
+<p>
+	<span class="has-text-black has-text-weight-normal">Tags:</span>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/podman/'>
+		podman
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/quadlet/'>
+		quadlet
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/iptables/'>
+		iptables
+	</a>
+	
+	<a class='link has-text-weight-light' href='https://blog.rnett.nz/tags/networking/'>
+		networking
+	</a>
+	
+</p>
+
+							
+						</div>
+					</div>
+
+					
+					<hr />
+					<div class='content'>
+						<p class='has-text-weight-bold'>Table of Contents</p>
+						<ul>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/rootless-containers/#problem'>Problem</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/rootless-containers/#managing-containers'>Managing containers</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/rootless-containers/#setting-up-a-simple-service'>Setting up a simple service</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/rootless-containers/#getting-a-bit-more-complicated-with-caddy'>Getting a bit more complicated with Caddy</a>
+								
+								<ul>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/rootless-containers/#making-quadlet-build-container-image-for-you'>Making Quadlet build container image for you</a>
+									</li>
+									
+									<li>
+										<a href='https://blog.rnett.nz/posts/rootless-containers/#sssh-keep-this-secret'>Sssh, keep this secret</a>
+									</li>
+									
+								</ul>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/rootless-containers/#getting-access'>Getting access</a>
+								
+							</li>
+							
+							<li>
+								<a href='https://blog.rnett.nz/posts/rootless-containers/#problem-re-cap'>Problem re-cap</a>
+								
+							</li>
+							
+						</ul>
+					</div>
+					
+
+					
+					<hr />
+
+					<div class='content has-text-justified'>
+						<h1 id="problem">Problem</h1>
+<p>This all started because I wanted to run some services on a VPS and expose them
+in an easy way. To do this I wanted them to be:</p>
+<ol>
+<li>Easy to manage, with no overhead (a.k.a not using Kubernetes)</li>
+<li>Secure enough for my small scale, using rootless containers</li>
+<li>Stable enough to survive restarts &amp; neglect</li>
+<li>(Bonus) Dual-stack IPv4 &amp; v6.</li>
+</ol>
+<p>Throughout this post I'll have the running example of setting up <a rel="noopener nofollow noreferrer external" target="_blank" href="https://caddyserver.com/">Caddy reverse-proxy</a> and <a rel="noopener nofollow noreferrer external" target="_blank" href="https://freshrss.github.io/FreshRSS/">FreshRSS</a>.</p>
+<h1 id="managing-containers">Managing containers</h1>
+<p>Recently I had a home Kubernetes cluster for this type of thing but that proved to be a large amount
+of effort. So this time I'm aiming for low-tech containerisation solutions like Podman!</p>
+<p>I happened to come across <a rel="noopener nofollow noreferrer external" target="_blank" href="https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html">Podman Quadlet</a>, which
+in short is a Systemd configuration layer on-top of Podman commands.
+It generates <code>.service</code>'s from <code>.container</code>, <code>.network</code> and <code>.volume</code> and can understand the interlinks between them.</p>
+<p>The development flow for them are basically:</p>
+<ol>
+<li>Look at some <a rel="noopener nofollow noreferrer external" target="_blank" href="https://wiki.archlinux.org/title/Podman#Quadlet">examples</a> or the <a rel="noopener nofollow noreferrer external" target="_blank" href="https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html">docs</a> for a starting point.</li>
+<li>Modify them to match a <code>docker-compose.yaml</code> you've found online</li>
+<li>Put them in the right location, lets say <code>~/.config/containers/systemd</code></li>
+<li>Run <code>systemctl --user daemon-reload</code></li>
+<li>Run <code>systemctl --user start container.server</code></li>
+<li>Use <code>journalctl</code> to figure what you did wrong &amp; repeat.</li>
+</ol>
+<h1 id="setting-up-a-simple-service">Setting up a simple service</h1>
+<p>Will start this example with setting up FreshRSS. It only requires three things:</p>
+<ol>
+<li>A container to the service</li>
+<li>A volume to store its data</li>
+<li>A port to expose the service</li>
+</ol>
+<p>For the container you can define it with Quadlet as:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="plain"><span class="giallo-l"><span># freshrss.container</span></span>
+<span class="giallo-l"><span>[Unit]</span></span>
+<span class="giallo-l"><span>Description=Fresh RSS container</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[Container]</span></span>
+<span class="giallo-l"><span>ContainerName=freshrss</span></span>
+<span class="giallo-l"><span>Image=index.docker.io/freshrss/freshrss:1</span></span>
+<span class="giallo-l"><span>AutoUpdate=registry # Auto-updating!</span></span>
+<span class="giallo-l"><span>Network=example.network # We&#39;ll get to this soon</span></span>
+<span class="giallo-l"><span>HostName=freshrss</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>Volume=freshrss-data.volume:/var/www/FreshRSS/data # &lt;- Refrence to the volume</span></span>
+<span class="giallo-l"><span>Environment=TZ=Etc/UTC</span></span>
+<span class="giallo-l"><span>Environment=CRON_MIN=1,31</span></span>
+<span class="giallo-l"><span>Environment=LISTEN=:8080</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[Service]</span></span>
+<span class="giallo-l"><span>Restart=on-failure</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span># Extend Timeout to allow time to pull the image</span></span>
+<span class="giallo-l"><span>TimeoutStartSec=300</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[Install]</span></span>
+<span class="giallo-l"><span>WantedBy=default.target</span></span></code></pre>
+<p>For the volume, as we are not defining any option it can just be an empty file:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="plain"><span class="giallo-l"><span># freshrss-data.volume</span></span></code></pre>
+<p>One of the neat parts of this are:</p>
+<ul>
+<li>No <strong>YAML</strong>! 🎉</li>
+<li><code>AutoUpdate=registry</code>, I get automatic updates from a built-in timer! Now it will update the <code>:1</code>-label to be the latest version daily.</li>
+<li>The <code>.container</code> file references the <code>.volume</code> and it just works!</li>
+</ul>
+<p>You'll note that we hadn't actually exposed a port here.
+Which is correct, the container is in a podman network named <code>example.network</code>.</p>
+<h1 id="getting-a-bit-more-complicated-with-caddy">Getting a bit more complicated with Caddy</h1>
+<p>With <code>podman</code> one of the first things you want to setup is a Network, cause the default network does not have DNS resolution
+for other containers.</p>
+<p>You can create a network via Quadlet with:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="plain"><span class="giallo-l"><span># example.network</span></span>
+<span class="giallo-l"><span>[Network]</span></span>
+<span class="giallo-l"><span>IPv6=true # &lt;- This makes it a Dualstack network</span></span>
+<span class="giallo-l"><span>Internal=false # &lt;- Allows the network to publish ports to the host</span></span></code></pre>
+<p>To define the <code>Caddy</code> container:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="plain"><span class="giallo-l"><span># caddy.container</span></span>
+<span class="giallo-l"><span>[Unit]</span></span>
+<span class="giallo-l"><span>Description=Caddy Reverse Proxy container</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[Container]</span></span>
+<span class="giallo-l"><span>ContainerName=caddy</span></span>
+<span class="giallo-l"><span>Image=caddy.build # &lt;- Links to a locally built image</span></span>
+<span class="giallo-l"><span>Network=example.network # &lt;- Links to our network</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>Volume=caddy-config.volume:/config # &lt;- Links volumes</span></span>
+<span class="giallo-l"><span>Volume=caddy-data.volume:/data # &lt;- Links volumes</span></span>
+<span class="giallo-l"><span>Volume=caddy-etc.volume:/etc/caddy # &lt;- Links volumes</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>Secret=caddy-cf-api,type=env,target=CF_API_TOKEN # &lt;- Links secrets</span></span>
+<span class="giallo-l"><span>Environment=DOMAIN=example.com</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>HostName=caddy</span></span>
+<span class="giallo-l"><span>PublishPort=8080:80/tcp</span></span>
+<span class="giallo-l"><span>PublishPort=8443:443/tcp</span></span>
+<span class="giallo-l"><span>PublishPort=8443:443/udp</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[Service]</span></span>
+<span class="giallo-l"><span>Restart=on-failure</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span># Extend Timeout to allow time to build the image</span></span>
+<span class="giallo-l"><span>TimeoutStartSec=900</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[Install]</span></span>
+<span class="giallo-l"><span>WantedBy=default.target</span></span></code></pre>
+<blockquote>
+<p>Note: all of the <code>*.volume</code> files are just empty files -- I mean, an exercise left to the reader.</p>
+</blockquote>
+<p>You will note a couple different things to the FreshRSS file, here we have:</p>
+<ul>
+<li>The image is referencing a <code>.build</code> file</li>
+<li>Reading a <code>podman secret</code> and injecting it as a environment variable</li>
+<li>Publishing ports</li>
+</ul>
+<h3 id="making-quadlet-build-container-image-for-you">Making Quadlet build container image for you</h3>
+<p>For the <code>caddy.build</code> are instructing Quadlet to schedule a <code>systemd</code> job to build our image.
+Which is super handy with Caddy where extra features like using Cloudflare for Lets Encrypt's DNS ACME challenge
+requires an addon.</p>
+<p>You can do with this with</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="plain"><span class="giallo-l"><span># caddy.build</span></span>
+<span class="giallo-l"><span>[Unit]</span></span>
+<span class="giallo-l"><span>Description=Building the caddy container</span></span>
+<span class="giallo-l"><span>Requires=network-online.target</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>[Build]</span></span>
+<span class="giallo-l"><span>File=/home/usr/caddy.Containerfile</span></span>
+<span class="giallo-l"><span>ImageTag=localhost/caddy-cf-dns</span></span>
+<span class="giallo-l"><span>Pull=newer</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>SetWorkingDirectory=unit</span></span></code></pre>
+<p>Then having a Containerfile like so:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="docker"><span class="giallo-l"><span style="color: #9399B2;font-style: italic;"># caddy.Containerfile</span></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">ARG</span><span> CADDY_VERSION=2.9.1</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">FROM</span><span> docker.io/library/caddy:${CADDY_VERSION}-builder-alpine </span><span style="color: #CBA6F7;">AS</span><span> builder</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9399B2;font-style: italic;"># Pinned dependencies to handle the change of libdns v1.0 APIs</span></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">RUN</span><span> xcaddy build </span><span style="color: #A6E3A1;">&quot;${CADDY_VERSION}&quot;</span><span> \</span></span>
+<span class="giallo-l"><span>    --with github.com/caddyserver/certmagic@b9399eadfbe7ac3092f4e65d45284b3aabe514f8 \</span></span>
+<span class="giallo-l"><span>    --with github.com/caddy-dns/cloudflare@bbf79111721a977fbd13dfe1f5b7aacaf7871a75</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">FROM</span><span> docker.io/library/caddy:${CADDY_VERSION}-alpine</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">COPY</span><span> --from=builder /usr/bin/caddy /usr/bin/caddy</span></span></code></pre>
+<blockquote>
+<p>Note: I've had some issues with this due to <code>systemd</code> running this job before
+the internet connectivity is up.</p>
+</blockquote>
+<h3 id="sssh-keep-this-secret">Sssh, keep this secret</h3>
+<p>Using <code>podman secret</code>'s with Quadlet is quite simple.
+You just need to make them by hand, like so:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="shellscript"><span class="giallo-l"><span style="color: #F38BA8;font-style: italic;">printf</span><span style="color: #A6E3A1;"> &quot;secretdata&quot;</span><span style="color: #94E2D5;"> |</span><span style="color: #89B4FA;font-style: italic;"> podman</span><span style="color: #A6E3A1;"> secret create caddy-cf-api -</span></span></code></pre><h1 id="getting-access">Getting access</h1>
+<p>So far we've got Caddy and FreshRSS running as Rootless containers, so they cannot bind to any
+privileged port like <code>:80</code> or <code>:443</code>. So we need to figure out how to talk to them on those
+port so we can have a good UX.</p>
+<p>This could either solve this at the router with some port-mapping, or we could do that on the host
+with <code>iptables</code>!</p>
+<p>Setting these up by hand are a bit annoying so I'll be using Ansible here (sorry for the yaml):</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;" ><code data-lang="yaml"><span class="giallo-l"><span style="color: #9399B2;">-</span><span style="color: #89B4FA;"> name</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> Allow Ingress</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">  ansible.builtin.iptables</span><span style="color: #94E2D5;">:</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    table</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> filter</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    chain</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> INPUT</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    protocol</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.proto }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    ip_version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.version }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    destination_port</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.port }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    action</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> insert</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    jump</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> ACCEPT</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">  loop</span><span style="color: #94E2D5;">:</span></span>
+<span class="giallo-l"><span style="color: #9399B2;font-style: italic;">    # External</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">port</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 80</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv4&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">port</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 80</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv6&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">port</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv4&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">port</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv6&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">port</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv4&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;udp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">port</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv6&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;udp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #9399B2;">-</span><span style="color: #89B4FA;"> name</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> Port Forwarding</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">  ansible.builtin.iptables</span><span style="color: #94E2D5;">:</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    table</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> nat</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    chain</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> OUTPUT</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    out_interface</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> lo</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    protocol</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.proto }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    match</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.proto }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    ip_version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.version }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    destination_port</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.from }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    jump</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> REDIRECT</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    to_ports</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;{{ item.to }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">    comment</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &quot;Redirect web traffic to Caddy port {{ item.from }}=&gt;{{ item.to }}&quot;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;">  loop</span><span style="color: #94E2D5;">:</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">from</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 80</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> to</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 8080</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv4&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">from</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 80</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> to</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 8080</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv6&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">from</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> to</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 8443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv4&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">from</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> to</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 8443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv6&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;tcp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">from</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> to</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 8443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv4&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;udp&#39;</span><span style="color: #9399B2;">}</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    - {</span><span style="color: #89B4FA;">from</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> to</span><span style="color: #94E2D5;">:</span><span style="color: #FAB387;"> 8443</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> version</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;ipv6&#39;</span><span style="color: #9399B2;">,</span><span style="color: #89B4FA;"> proto</span><span style="color: #94E2D5;">:</span><span style="color: #A6E3A1;"> &#39;udp&#39;</span><span style="color: #9399B2;">}</span></span></code></pre>
+<blockquote>
+<p>Note: Saving the <code>iptable</code> changes is an exercise left to the reader. I'm too embarrassed by how I do it to post it.</p>
+</blockquote>
+<p>With these two blocks the host is setup with an ingress path on the privileged ports and
+are redirected to the unprivileged ports used by the rootless <code>Caddy</code>!</p>
+<h1 id="problem-re-cap">Problem re-cap</h1>
+<p>So to re-cap what just happened here:</p>
+<ol>
+<li>Easy to manage, with no overhead (a.k.a not using Kubernetes)
+<ul>
+<li>Quadlet makes use of systemd to manage your containers for you</li>
+<li>It does most of the supporting work too: volumes, networks, image builds, and referencing secrets!</li>
+</ul>
+</li>
+<li>Secure enough for my small scale, using rootless containers
+<ul>
+<li>Rootless with Quadlet + Podman is an easy as <code>systemctl --user start</code></li>
+</ul>
+</li>
+<li>Stable enough to survive restarts &amp; neglect
+<ul>
+<li><code>systemd</code> handles all my restart woes</li>
+<li>Podman's <code>AutoUpdate=registry</code> ensure my images are up to date</li>
+</ul>
+</li>
+<li>(Bonus) Dual-stack IPv4 &amp; v6.
+<ul>
+<li>It was just a flag in the <code>.network</code>, how easy.</li>
+</ul>
+</li>
+</ol>
+<p>Overall, this has been a setup &amp; forget situation.
+The only time I have had an issue is when the container builds broke
+due dependencies moving between major version of <code>libdns</code>.</p>
+<p>I'd give it a 4/5, good for home-scale 👍</p>
+
+					</div>
+				</article>
+
+				<hr />
+				
+				
+			</div>
+		</div>
+	</div>
+</main>
+
+
+	
+	<footer class='footer py-2'>
+		<div class='has-text-centered'>
+			<p class="mb-1">
+				Built with 💻 code and 💖 love
+            </p>
+			<p class="mt-1">
+				Powered By 🐾 Zola
+			</p>
+		</div>
+	</footer>
+	
+
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/elasticlunr/0.9.6/elasticlunr.min.js'></script>
+	<script src='https://blog.rnett.nz/search_index.en.js'></script>
+	<script src='https://blog.rnett.nz/js/site.js'></script>
+	
+	
+</body>
+
+</html>
