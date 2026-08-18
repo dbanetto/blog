@@ -28,7 +28,7 @@ So, I decided to branch out of the old laptops under desk to the **_THE CLOUD_**
 
 I set out with the goal of:
  * Learn more about IPv6 & use with Kubernetes
- * Strictly use the [Gateway API](https://gateway-api.sigs.k8s.io/) and be able to use [GAMMA](https://gateway-api.sigs.k8s.io/mesh/)
+ * Strictly use the [Gateway API](https://gateway-api.sigs.k8s.io/) and be able to use [GAMMA](https://gateway-api.sigs.k8s.io/docs/mesh/mesh-overview/)
  * Spending as little as a I can
 
 

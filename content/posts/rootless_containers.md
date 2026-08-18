@@ -19,7 +19,7 @@ in an easy way. To do this I wanted them to be:
  1. Stable enough to survive restarts & neglect
  1. (Bonus) Dual-stack IPv4 & v6.
 
-Throughout this post I'll have the running example of setting up [Caddy reverse-proxy](https://caddyserver.com/) and [FreshRSS](https://freshrss.github.io/).
+Throughout this post I'll have the running example of setting up [Caddy reverse-proxy](https://caddyserver.com/) and [FreshRSS](https://freshrss.github.io/FreshRSS/).
 
 # Managing containers
 
@@ -211,6 +211,7 @@ with `iptables`!
 
 Setting these up by hand are a bit annoying so I'll be using Ansible here (sorry for the yaml):
 
+{% raw %}
 ```yaml
 - name: Allow Ingress
   ansible.builtin.iptables:
@@ -250,6 +251,7 @@ Setting these up by hand are a bit annoying so I'll be using Ansible here (sorry
     - {from: 443, to: 8443, version: 'ipv4', proto: 'udp'}
     - {from: 443, to: 8443, version: 'ipv6', proto: 'udp'}
 ```
+{% endraw %}
 
 > Note: Saving the `iptable` changes is an exercise left to the reader. I'm too embarrassed by how I do it to post it.
 

@@ -1,0 +1,11 @@
+{% component  page_publish_metadata(page) %}
+<p class='has-text-grey'>
+	Published on <time datetime='{{page.date}}'>{{ page.date }}</time>
+</p>
+{% endcomponent page_publish_metadata %}
+
+{% component page_content_metadata(page) %}
+<p class='has-text-grey'>
+	🕰️ {{page.reading_time}} min, {{page.word_count}} words
+</p>
+{% endcomponent page_content_metadata %}

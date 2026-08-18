@@ -1,0 +1,22 @@
+{% component render_categories(categories) %}
+<p>
+	<span class="has-text-black has-text-weight-normal">Categories:</span>
+	{% for category in categories %}
+	<a class='link has-text-weight-light' href='{{ get_taxonomy_url(kind='categories', name=category) }}'>
+		{{ category }}
+	</a>
+	{% endfor %}
+</p>
+{% endcomponent render_categories %}
+
+
+{% component render_tags(tags) %}
+<p>
+	<span class="has-text-black has-text-weight-normal">Tags:</span>
+	{% for tag in tags %}
+	<a class='link has-text-weight-light' href='{{ get_taxonomy_url(kind='tags', name=tag) }}'>
+		{{ tag }}
+	</a>
+	{% endfor %}
+</p>
+{% endcomponent render_tags %}

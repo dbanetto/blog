@@ -13,22 +13,22 @@
 					<h2 class='subtitle'>{{ page.description }}</h2>
 					<div class='columns mb-0'>
 						<div class='column'>
-							{{ macros::page_publish_metadata(page=page) }}
+                            {{ <page_publish_metadata page={ page } /> }}
 						</div>
 						<div class='column has-text-right-desktop'>
-							{{ macros::page_content_metadata(page=page) }}
+                            {{ <page_content_metadata page={ page } /> }}
 						</div>
 					</div>
 
 					<div class='columns mb-0'>
 						<div class='column'>
 							{% if page.taxonomies.categories %}
-							{{ macros::render_categories(categories=page.taxonomies.categories) }}
+                            {{ <render_categories categories={page.taxonomies.categories} /> }}
 							{% endif %}
 						</div>
 						<div class='column has-text-right-desktop'>
 							{% if page.taxonomies.tags %}
-							{{ macros::render_tags(tags=page.taxonomies.tags) }}
+                            {{ <render_tags tags={page.taxonomies.tags} /> }}
 							{% endif %}
 						</div>
 					</div>

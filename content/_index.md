@@ -36,7 +36,7 @@ an academia report that is due tomorrow.
 I won't delude any expectations that it is any good but at least I've
 had some fun writing it.
 
-### Why have a in blog in the good year of {{ current_year }}?!
+### Why have a in blog in the good year of {% raw %}{{ current_year }}{% endraw %}?!
 
 It is what all the cool cats do these days and I wanted to be apart of the cool
 crowd this time.
